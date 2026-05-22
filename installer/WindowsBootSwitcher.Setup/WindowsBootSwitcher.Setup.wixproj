@@ -1,5 +1,6 @@
 <Project Sdk="WixToolset.Sdk/7.0.0">
   <PropertyGroup>
-    <WixAcceptOsmfEula>true</WixAcceptOsmfEula>
+    <AcceptEula>wix7</AcceptEula>
+    <SuppressIces>ICE09;ICE32;ICE61;ICE71</SuppressIces>
   </PropertyGroup>
 </Project>
