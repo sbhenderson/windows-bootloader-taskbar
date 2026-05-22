@@ -27,6 +27,7 @@ Windows Boot Switcher is a Windows 10/11 utility that lets a user switch the def
 - **Tray UI:** Minimal WinForms tray application built around `NotifyIcon`.
 - **Installer:** MSI built with WiX.
 - **CI:** GitHub Actions on Windows runners.
+- **Primary architecture target:** x64 for v1.
 
 This is the best fit for the product because Windows service hosting, installer tooling, Event Log integration, and tray icon support are all straightforward in the .NET ecosystem. NativeAOT should be used where it reduces footprint without adding UI framework friction, especially in the service.
 
@@ -122,7 +123,9 @@ Mutation flow:
 
 ## Boot Configuration Handling
 
-For v1, the privileged adapter should wrap existing Windows BCD tooling instead of implementing a custom low-level BCD parser. That keeps the risky code path small and replaceable.
+For v1, the privileged adapter should use the Windows BCD WMI provider in `root\WMI` rather than parsing localized `bcdedit.exe` output. That keeps the risky code path structured and testable while avoiding locale-sensitive text parsing.
+
+NativeAOT remains the preferred deployment target for the service. If WMI interop proves incompatible with NativeAOT during implementation, the fallback is to keep the service contract unchanged and temporarily publish the service as a regular self-contained executable rather than replacing the BCD access strategy with text parsing.
 
 Behavior rules:
 
@@ -130,7 +133,7 @@ Behavior rules:
 - The selected default entry becomes the persistent boot default until changed again.
 - Timeout values are limited to:
   - `Off` -> `0`
-  - `Default` -> `30`
+  - `30 seconds` -> `30`
 
 Unsupported or unexpected boot configuration states should fail explicitly and surface a clear error rather than being silently ignored.
 
@@ -144,15 +147,30 @@ Authorization policy:
 Security design:
 
 - IPC stays local to the machine through named pipes.
-- The service validates the caller identity for every mutating operation.
+- The named pipe must reject remote clients and must not trust any client-declared role or identity data.
+- The pipe ACL should allow local interactive users to connect for `GetState`, while the service keeps final authorization decisions server-side for every request.
+- The service validates the caller identity for every mutating operation using the Windows access token and local group membership resolved on the service side.
 - Requested entry identifiers must match the current enumerated set before a change is applied.
 - Unknown timeout values are rejected.
 - The tray app must not display success unless the service confirms the change.
+
+Admin/UAC policy for v1:
+
+- A user whose Windows account is a member of the local `Administrators` group may perform changes without relaunching the tray app as elevated.
+- A standard user remains read-only.
+- This is an intentional product decision to keep the tray workflow fast and simple while still requiring administrator identity for machine-wide changes.
 
 UI behavior for restricted users:
 
 - A non-admin user can see current state.
 - Mutating actions are disabled or fail with a clear permission message.
+
+## Windows Runtime Constraints
+
+- The Windows service should use `Automatic (Delayed Start)` so it comes up reliably after boot without competing with earlier startup work.
+- The tray application should autostart via a per-machine `HKLM\Software\Microsoft\Windows\CurrentVersion\Run` entry so installed users get the icon automatically at sign-in.
+- If the tray app starts before the service is ready, it should enter a degraded state: show the icon, disable mutating actions, surface a `Service starting` or `Service unavailable` status, and retry connection with bounded backoff until the pipe becomes available.
+- `Refresh` should always retry an immediate reconnect attempt.
 
 ## Tray Menu Design
 
@@ -182,10 +200,11 @@ The v1 distribution format is an MSI.
 
 Installer requirements:
 
-- Install the service with the correct account and startup settings
+- Install the service as `LocalSystem` with `Automatic (Delayed Start)` startup
 - Install the tray application binaries
-- Register the tray application to start at user logon
+- Register the tray application to start at user logon through `HKLM\Software\Microsoft\Windows\CurrentVersion\Run`
 - Support silent deployment for IT or power-user rollout
+- Support install, upgrade, repair, and uninstall without orphaning the service or tray startup registration
 
 MSIX is not required for v1 because it adds packaging constraints that are not a good fit for a Windows service.
 
@@ -200,9 +219,12 @@ Recommended workflow stages:
 3. Restore dependencies
 4. Build solution
 5. Run automated tests
-6. Publish the service and tray binaries
+6. Publish x64 service and tray binaries
 7. Build the MSI
-8. Upload build artifacts
+8. Upload build artifacts:
+   - x64 published service output
+   - x64 published tray output
+   - MSI installer
 
 Code signing should be optional in v1:
 
@@ -218,12 +240,14 @@ Code signing should be optional in v1:
 - Unit tests for request validation and authorization decisions
 - Unit tests for IPC contract serialization
 - Service-level tests around the boot configuration abstraction
+- Tray-facing tests for menu-state generation so checked items, disabled actions, and permission-state UX are validated without relying on WinForms UI automation
 
 ### Manual validation
 
 - Windows 10 smoke test
 - Windows 11 smoke test
 - Installer install/uninstall validation
+- Installer install-upgrade-repair-uninstall validation
 - Tray app startup at logon validation
 - End-to-end default entry switch validation
 - End-to-end timeout toggle validation
