@@ -5,4 +5,8 @@
     <RootNamespace>WindowsBootSwitcher.Service</RootNamespace>
     <PublishAot>true</PublishAot>
   </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\WindowsBootSwitcher.Contracts\WindowsBootSwitcher.Contracts.csproj" />
+    <PackageReference Include="System.Management" Version="10.0.0" />
+  </ItemGroup>
 </Project>
