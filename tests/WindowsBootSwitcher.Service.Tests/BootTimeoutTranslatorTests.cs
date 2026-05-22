@@ -17,4 +17,12 @@ public sealed class BootTimeoutTranslatorTests
 
         Assert.Equal(expectedSeconds, seconds);
     }
+
+    [Fact]
+    public void Translate_throws_for_unsupported_values()
+    {
+        var translator = new BootTimeoutTranslator();
+
+        Assert.Throws<ArgumentOutOfRangeException>(() => translator.Translate((BootMenuTimeoutMode)99));
+    }
 }

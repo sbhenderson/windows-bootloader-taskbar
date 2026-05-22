@@ -98,6 +98,65 @@ public sealed class BootConfigurationServiceTests
         Assert.Equal(0, response.State!.TimeoutSeconds);
     }
 
+    [Fact]
+    public void SetDefaultEntry_returns_a_failure_response_when_the_adapter_throws()
+    {
+        var adapter = new ThrowingBootConfigurationAdapter(
+            new BootConfigurationSnapshot(
+                CurrentDefaultEntryId: "entry-2",
+                TimeoutSeconds: 30,
+                Entries: ImmutableArray.Create(
+                    new BootConfigurationEntry("entry-2", "Windows 11", true),
+                    new BootConfigurationEntry("entry-3", "Windows Recovery", true))));
+
+        var service = new BootConfigurationService(adapter);
+
+        var response = service.SetDefaultEntry(new SetDefaultEntryRequest("entry-3"));
+
+        Assert.False(response.Success);
+        Assert.Equal("adapter_error", response.ErrorCode);
+        Assert.Equal("adapter failure", response.ErrorMessage);
+    }
+
+    [Fact]
+    public void SetTimeout_returns_a_failure_response_when_the_adapter_throws()
+    {
+        var adapter = new ThrowingBootConfigurationAdapter(
+            new BootConfigurationSnapshot(
+                CurrentDefaultEntryId: "entry-2",
+                TimeoutSeconds: 30,
+                Entries: ImmutableArray.Create(
+                    new BootConfigurationEntry("entry-2", "Windows 11", true))));
+
+        var service = new BootConfigurationService(adapter);
+
+        var response = service.SetTimeout(new SetTimeoutRequest(BootMenuTimeoutMode.ThirtySeconds));
+
+        Assert.False(response.Success);
+        Assert.Equal("adapter_error", response.ErrorCode);
+        Assert.Equal("adapter failure", response.ErrorMessage);
+    }
+
+    [Fact]
+    public void SetTimeout_returns_a_failure_response_for_unsupported_timeout_modes()
+    {
+        var adapter = new FakeBootConfigurationAdapter(
+            new BootConfigurationSnapshot(
+                CurrentDefaultEntryId: "entry-2",
+                TimeoutSeconds: 30,
+                Entries: ImmutableArray.Create(
+                    new BootConfigurationEntry("entry-2", "Windows 11", true))));
+
+        var service = new BootConfigurationService(adapter);
+
+        var response = service.SetTimeout(new SetTimeoutRequest((BootMenuTimeoutMode)99));
+
+        Assert.False(response.Success);
+        Assert.Equal("invalid_timeout_mode", response.ErrorCode);
+        Assert.NotNull(response.State);
+        Assert.Equal(30, response.State!.TimeoutSeconds);
+    }
+
     private sealed class FakeBootConfigurationAdapter : IBootConfigurationAdapter
     {
         private readonly BootConfigurationSnapshot _snapshot;
@@ -121,6 +180,28 @@ public sealed class BootConfigurationServiceTests
         public void SetTimeout(int timeoutSeconds)
         {
             TimeoutSeconds = timeoutSeconds;
+        }
+    }
+
+    private sealed class ThrowingBootConfigurationAdapter : IBootConfigurationAdapter
+    {
+        private readonly BootConfigurationSnapshot _snapshot;
+
+        public ThrowingBootConfigurationAdapter(BootConfigurationSnapshot snapshot)
+        {
+            _snapshot = snapshot;
+        }
+
+        public BootConfigurationSnapshot ReadState() => _snapshot;
+
+        public void SetDefaultEntry(string entryId)
+        {
+            throw new BootConfigurationException("adapter_error", "adapter failure");
+        }
+
+        public void SetTimeout(int timeoutSeconds)
+        {
+            throw new BootConfigurationException("adapter_error", "adapter failure");
         }
     }
 }

@@ -14,12 +14,23 @@ public sealed class WmiBootConfigurationAdapter : IBootConfigurationAdapter
 
     public BootConfigurationSnapshot ReadState()
     {
-        using var store = GetStore();
-        var defaultEntryId = ReadDefaultEntryId(store);
-        var timeoutSeconds = ReadTimeoutSeconds();
-        var entries = ReadEntries(defaultEntryId);
+        try
+        {
+            using var store = GetStore();
+            var defaultEntryId = ReadDefaultEntryId(store);
+            var timeoutSeconds = ReadTimeoutSeconds();
+            var entries = ReadEntries(defaultEntryId);
 
-        return new BootConfigurationSnapshot(defaultEntryId, timeoutSeconds, entries);
+            return new BootConfigurationSnapshot(defaultEntryId, timeoutSeconds, entries);
+        }
+        catch (BootConfigurationException)
+        {
+            throw;
+        }
+        catch (Exception exception) when (exception is ManagementException or System.Runtime.InteropServices.COMException or UnauthorizedAccessException)
+        {
+            throw new BootConfigurationException("wmi_error", "Failed to read boot configuration from WMI.", exception);
+        }
     }
 
     public void SetDefaultEntry(string entryId)
@@ -29,12 +40,23 @@ public sealed class WmiBootConfigurationAdapter : IBootConfigurationAdapter
             throw new BootConfigurationException("invalid_entry_id", "Boot entry id must be provided.");
         }
 
-        using var store = GetStore();
-        using var inParameters = store.GetMethodParameters("SetDefaultObject");
-        inParameters["Id"] = entryId;
+        try
+        {
+            using var store = GetStore();
+            using var inParameters = store.GetMethodParameters("SetDefaultObject");
+            inParameters["Id"] = entryId;
 
-        using var outParameters = store.InvokeMethod("SetDefaultObject", inParameters, null);
-        EnsureSuccess(outParameters, "SetDefaultObject");
+            using var outParameters = store.InvokeMethod("SetDefaultObject", inParameters, null);
+            EnsureSuccess(outParameters, "SetDefaultObject");
+        }
+        catch (BootConfigurationException)
+        {
+            throw;
+        }
+        catch (Exception exception) when (exception is ManagementException or System.Runtime.InteropServices.COMException or UnauthorizedAccessException)
+        {
+            throw new BootConfigurationException("wmi_error", "Failed to set the default boot entry.", exception);
+        }
     }
 
     public void SetTimeout(int timeoutSeconds)
@@ -44,13 +66,24 @@ public sealed class WmiBootConfigurationAdapter : IBootConfigurationAdapter
             throw new BootConfigurationException("invalid_timeout", "Boot timeout must be zero or greater.");
         }
 
-        using var bootManager = GetBootManagerObject();
-        using var inParameters = bootManager.GetMethodParameters("SetIntegerElement");
-        inParameters["Type"] = BootManagerTimeoutElementType;
-        inParameters["Integer"] = (ulong)timeoutSeconds;
+        try
+        {
+            using var bootManager = GetBootManagerObject();
+            using var inParameters = bootManager.GetMethodParameters("SetIntegerElement");
+            inParameters["Type"] = BootManagerTimeoutElementType;
+            inParameters["Integer"] = (ulong)timeoutSeconds;
 
-        using var outParameters = bootManager.InvokeMethod("SetIntegerElement", inParameters, null);
-        EnsureSuccess(outParameters, "SetIntegerElement");
+            using var outParameters = bootManager.InvokeMethod("SetIntegerElement", inParameters, null);
+            EnsureSuccess(outParameters, "SetIntegerElement");
+        }
+        catch (BootConfigurationException)
+        {
+            throw;
+        }
+        catch (Exception exception) when (exception is ManagementException or System.Runtime.InteropServices.COMException or UnauthorizedAccessException)
+        {
+            throw new BootConfigurationException("wmi_error", "Failed to set the boot menu timeout.", exception);
+        }
     }
 
     private static ManagementObject GetStore()
@@ -85,20 +118,23 @@ public sealed class WmiBootConfigurationAdapter : IBootConfigurationAdapter
         using var searcher = new ManagementObjectSearcher(
             new ManagementScope(RootNamespace),
             new ObjectQuery($"SELECT Id, Description, ApplicationType FROM {BcdObjectClassName}"));
+        using var results = searcher.Get();
 
         var builder = ImmutableArray.CreateBuilder<BootConfigurationEntry>();
 
-        foreach (ManagementObject obj in searcher.Get())
+        foreach (ManagementObject obj in results)
         {
-            var id = obj["Id"]?.ToString();
-            var description = obj["Description"]?.ToString();
+            using var current = obj;
+
+            var id = current["Id"]?.ToString();
+            var description = current["Description"]?.ToString();
 
             if (string.IsNullOrWhiteSpace(id) || string.IsNullOrWhiteSpace(description))
             {
                 continue;
             }
 
-            var applicationType = ReadUInt32(obj, "ApplicationType");
+            var applicationType = ReadUInt32(current, "ApplicationType");
             if (applicationType != WindowsOsLoaderApplicationType)
             {
                 continue;
@@ -107,7 +143,7 @@ public sealed class WmiBootConfigurationAdapter : IBootConfigurationAdapter
             builder.Add(new BootConfigurationEntry(
                 id,
                 description,
-                string.Equals(id, defaultEntryId, StringComparison.OrdinalIgnoreCase)));
+                true));
         }
 
         return builder.ToImmutable();
@@ -127,8 +163,9 @@ public sealed class WmiBootConfigurationAdapter : IBootConfigurationAdapter
     private static ManagementObject GetSingleObject(string query, string className, string? objectId = null)
     {
         using var searcher = new ManagementObjectSearcher(new ManagementScope(RootNamespace), new ObjectQuery(query));
+        using var results = searcher.Get();
 
-        foreach (ManagementObject obj in searcher.Get())
+        foreach (ManagementObject obj in results)
         {
             if (objectId is null)
             {
@@ -140,6 +177,8 @@ public sealed class WmiBootConfigurationAdapter : IBootConfigurationAdapter
             {
                 return obj;
             }
+
+            obj.Dispose();
         }
 
         throw new BootConfigurationException("bcd_object_not_found", $"Unable to locate BCD {className}.");
@@ -147,7 +186,14 @@ public sealed class WmiBootConfigurationAdapter : IBootConfigurationAdapter
 
     private static void EnsureSuccess(ManagementBaseObject? outParameters, string methodName)
     {
-        var returnValue = outParameters?["ReturnValue"];
+        if (outParameters is null)
+        {
+            throw new BootConfigurationException(
+                "wmi_error",
+                $"BCD operation '{methodName}' returned no output parameters.");
+        }
+
+        var returnValue = outParameters["ReturnValue"];
         var status = returnValue is null
             ? 0u
             : Convert.ToUInt32(returnValue, System.Globalization.CultureInfo.InvariantCulture);

@@ -60,7 +60,19 @@ public sealed class BootConfigurationService
         ArgumentNullException.ThrowIfNull(request);
 
         var snapshot = _adapter.ReadState();
-        var timeoutSeconds = _timeoutTranslator.Translate(request.Mode);
+        int timeoutSeconds;
+        try
+        {
+            timeoutSeconds = _timeoutTranslator.Translate(request.Mode);
+        }
+        catch (ArgumentOutOfRangeException exception)
+        {
+            return new BootOperationResponse(
+                Success: false,
+                ErrorCode: "invalid_timeout_mode",
+                ErrorMessage: exception.Message,
+                State: BuildState(snapshot));
+        }
 
         try
         {
