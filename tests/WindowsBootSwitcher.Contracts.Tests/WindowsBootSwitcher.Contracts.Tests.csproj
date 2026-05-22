@@ -1,0 +1,10 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <IsTestProject>true</IsTestProject>
+    <RootNamespace>WindowsBootSwitcher.Contracts.Tests</RootNamespace>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\WindowsBootSwitcher.Contracts\WindowsBootSwitcher.Contracts.csproj" />
+  </ItemGroup>
+</Project>

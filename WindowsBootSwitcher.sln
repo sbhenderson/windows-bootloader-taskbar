@@ -1,0 +1,55 @@
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.0.31903.59
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "WindowsBootSwitcher.Contracts", "src\WindowsBootSwitcher.Contracts\WindowsBootSwitcher.Contracts.csproj", "{B6D610F5-65A3-4ED1-8F6F-0F7AB2F5DA11}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "WindowsBootSwitcher.Service", "src\WindowsBootSwitcher.Service\WindowsBootSwitcher.Service.csproj", "{3EBC9A55-4C4A-4F1D-9E2C-CE55F3DABF17}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "WindowsBootSwitcher.Tray", "src\WindowsBootSwitcher.Tray\WindowsBootSwitcher.Tray.csproj", "{C0B2F6B8-6CF4-4C0A-8F38-6DAED9E2A6B9}"
+EndProject
+Project("{930C7802-8A8C-48F9-8165-68863BCCD9DD}") = "WindowsBootSwitcher.Setup", "installer\WindowsBootSwitcher.Setup\WindowsBootSwitcher.Setup.wixproj", "{88C73113-4E17-4FB1-9A0C-2D9F2E24F08B}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "WindowsBootSwitcher.Contracts.Tests", "tests\WindowsBootSwitcher.Contracts.Tests\WindowsBootSwitcher.Contracts.Tests.csproj", "{A1AC7E4D-7E3C-41F1-8B1F-1E5E4D8A1B23}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "WindowsBootSwitcher.Service.Tests", "tests\WindowsBootSwitcher.Service.Tests\WindowsBootSwitcher.Service.Tests.csproj", "{C8FD7862-3A72-4E2D-B0C4-8E0B7AE6F5D4}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "WindowsBootSwitcher.Tray.Tests", "tests\WindowsBootSwitcher.Tray.Tests\WindowsBootSwitcher.Tray.Tests.csproj", "{E2A0A5CC-9E28-4E5C-A7F2-5D0E7D6D0B4A}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|x64 = Debug|x64
+		Release|x64 = Release|x64
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{B6D610F5-65A3-4ED1-8F6F-0F7AB2F5DA11}.Debug|x64.ActiveCfg = Debug|x64
+		{B6D610F5-65A3-4ED1-8F6F-0F7AB2F5DA11}.Debug|x64.Build.0 = Debug|x64
+		{B6D610F5-65A3-4ED1-8F6F-0F7AB2F5DA11}.Release|x64.ActiveCfg = Release|x64
+		{B6D610F5-65A3-4ED1-8F6F-0F7AB2F5DA11}.Release|x64.Build.0 = Release|x64
+		{3EBC9A55-4C4A-4F1D-9E2C-CE55F3DABF17}.Debug|x64.ActiveCfg = Debug|x64
+		{3EBC9A55-4C4A-4F1D-9E2C-CE55F3DABF17}.Debug|x64.Build.0 = Debug|x64
+		{3EBC9A55-4C4A-4F1D-9E2C-CE55F3DABF17}.Release|x64.ActiveCfg = Release|x64
+		{3EBC9A55-4C4A-4F1D-9E2C-CE55F3DABF17}.Release|x64.Build.0 = Release|x64
+		{C0B2F6B8-6CF4-4C0A-8F38-6DAED9E2A6B9}.Debug|x64.ActiveCfg = Debug|x64
+		{C0B2F6B8-6CF4-4C0A-8F38-6DAED9E2A6B9}.Debug|x64.Build.0 = Debug|x64
+		{C0B2F6B8-6CF4-4C0A-8F38-6DAED9E2A6B9}.Release|x64.ActiveCfg = Release|x64
+		{C0B2F6B8-6CF4-4C0A-8F38-6DAED9E2A6B9}.Release|x64.Build.0 = Release|x64
+		{88C73113-4E17-4FB1-9A0C-2D9F2E24F08B}.Debug|x64.ActiveCfg = Debug|x64
+		{88C73113-4E17-4FB1-9A0C-2D9F2E24F08B}.Release|x64.ActiveCfg = Release|x64
+		{A1AC7E4D-7E3C-41F1-8B1F-1E5E4D8A1B23}.Debug|x64.ActiveCfg = Debug|x64
+		{A1AC7E4D-7E3C-41F1-8B1F-1E5E4D8A1B23}.Debug|x64.Build.0 = Debug|x64
+		{A1AC7E4D-7E3C-41F1-8B1F-1E5E4D8A1B23}.Release|x64.ActiveCfg = Release|x64
+		{A1AC7E4D-7E3C-41F1-8B1F-1E5E4D8A1B23}.Release|x64.Build.0 = Release|x64
+		{C8FD7862-3A72-4E2D-B0C4-8E0B7AE6F5D4}.Debug|x64.ActiveCfg = Debug|x64
+		{C8FD7862-3A72-4E2D-B0C4-8E0B7AE6F5D4}.Debug|x64.Build.0 = Debug|x64
+		{C8FD7862-3A72-4E2D-B0C4-8E0B7AE6F5D4}.Release|x64.ActiveCfg = Release|x64
+		{C8FD7862-3A72-4E2D-B0C4-8E0B7AE6F5D4}.Release|x64.Build.0 = Release|x64
+		{E2A0A5CC-9E28-4E5C-A7F2-5D0E7D6D0B4A}.Debug|x64.ActiveCfg = Debug|x64
+		{E2A0A5CC-9E28-4E5C-A7F2-5D0E7D6D0B4A}.Debug|x64.Build.0 = Debug|x64
+		{E2A0A5CC-9E28-4E5C-A7F2-5D0E7D6D0B4A}.Release|x64.ActiveCfg = Release|x64
+		{E2A0A5CC-9E28-4E5C-A7F2-5D0E7D6D0B4A}.Release|x64.Build.0 = Release|x64
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+EndGlobal
