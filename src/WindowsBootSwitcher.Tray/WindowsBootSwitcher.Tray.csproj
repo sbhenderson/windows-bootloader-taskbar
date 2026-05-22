@@ -4,5 +4,9 @@
     <OutputType>WinExe</OutputType>
     <UseWindowsForms>true</UseWindowsForms>
     <RootNamespace>WindowsBootSwitcher.Tray</RootNamespace>
+    <Nullable>enable</Nullable>
   </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\WindowsBootSwitcher.Contracts\WindowsBootSwitcher.Contracts.csproj" />
+  </ItemGroup>
 </Project>
