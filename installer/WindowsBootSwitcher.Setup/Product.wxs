@@ -8,7 +8,64 @@
     Scope="perMachine"
     InstallerVersion="500"
     Compressed="yes">
+    <MajorUpgrade DowngradeErrorMessage="A newer version of [ProductName] is already installed." />
     <MediaTemplate EmbedCab="yes" />
-    <Feature Id="ProductFeature" Title="Windows Boot Switcher" Level="1" />
   </Package>
+
+  <Fragment>
+    <StandardDirectory Id="ProgramFiles64Folder">
+      <Directory Id="INSTALLFOLDER" Name="Windows Boot Switcher" />
+    </StandardDirectory>
+  </Fragment>
+
+  <Fragment>
+    <DirectoryRef Id="INSTALLFOLDER">
+      <Component Id="WindowsBootSwitcherServiceComponent" Guid="*">
+        <File
+          Id="WindowsBootSwitcherServiceExe"
+          Source="$(var.ServicePublishDir)\WindowsBootSwitcher.Service.exe"
+          KeyPath="yes" />
+        <ServiceInstall
+          Id="WindowsBootSwitcherServiceInstall"
+          Type="ownProcess"
+          Name="WindowsBootSwitcher"
+          DisplayName="Windows Boot Switcher"
+          Description="Runs the privileged bootloader switching service."
+          Start="auto"
+          Account="LocalSystem"
+          ErrorControl="normal" />
+        <RegistryValue
+          Root="HKLM"
+          Key="SYSTEM\CurrentControlSet\Services\WindowsBootSwitcher"
+          Name="DelayedAutostart"
+          Value="1"
+          Type="integer" />
+        <ServiceControl
+          Id="WindowsBootSwitcherServiceControl"
+          Name="WindowsBootSwitcher"
+          Start="install"
+          Stop="both"
+          Remove="uninstall"
+          Wait="yes" />
+      </Component>
+
+      <Component Id="TrayStartupRegistration" Guid="*">
+        <RegistryValue
+          Root="HKLM"
+          Key="Software\Microsoft\Windows\CurrentVersion\Run"
+          Name="WindowsBootSwitcherTray"
+          Value="&quot;[INSTALLFOLDER]WindowsBootSwitcher.Tray.exe&quot;"
+          Type="string"
+          KeyPath="yes" />
+      </Component>
+    </DirectoryRef>
+  </Fragment>
+
+  <Fragment>
+    <Feature Id="ProductFeature" Title="Windows Boot Switcher" Level="1">
+      <ComponentRef Id="WindowsBootSwitcherServiceComponent" />
+      <ComponentRef Id="TrayStartupRegistration" />
+      <ComponentGroupRef Id="TrayPayload" />
+    </Feature>
+  </Fragment>
 </Wix>

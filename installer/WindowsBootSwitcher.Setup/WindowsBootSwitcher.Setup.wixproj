@@ -2,5 +2,26 @@
   <PropertyGroup>
     <AcceptEula>wix7</AcceptEula>
     <SuppressIces>ICE09;ICE32;ICE61;ICE71</SuppressIces>
+    <ServiceProject>$(MSBuildProjectDirectory)\..\..\src\WindowsBootSwitcher.Service\WindowsBootSwitcher.Service.csproj</ServiceProject>
+    <TrayProject>$(MSBuildProjectDirectory)\..\..\src\WindowsBootSwitcher.Tray\WindowsBootSwitcher.Tray.csproj</TrayProject>
+    <ServicePublishDir>$(MSBuildProjectDirectory)\..\..\artifacts\service</ServicePublishDir>
+    <TrayPublishDir>$(MSBuildProjectDirectory)\..\..\artifacts\tray</TrayPublishDir>
+    <DefineConstants>ServicePublishDir=$(ServicePublishDir);TrayPublishDir=$(TrayPublishDir)</DefineConstants>
   </PropertyGroup>
+
+  <ItemGroup>
+    <HarvestDirectory Include="$(TrayPublishDir)">
+      <ComponentGroupName>TrayPayload</ComponentGroupName>
+      <DirectoryRefId>INSTALLFOLDER</DirectoryRefId>
+      <SuppressRootDirectory>true</SuppressRootDirectory>
+    </HarvestDirectory>
+  </ItemGroup>
+
+  <Target Name="PublishPayloads" BeforeTargets="Build">
+    <MakeDir Directories="$(ServicePublishDir);$(TrayPublishDir)" />
+    <Exec
+      Command='dotnet publish "$(ServiceProject)" -c $(Configuration) -p:Platform=x64 -r win-x64 --self-contained true -p:PublishAot=true -o "$(ServicePublishDir)"' />
+    <Exec
+      Command='dotnet publish "$(TrayProject)" -c $(Configuration) -p:Platform=x64 -r win-x64 --self-contained true -o "$(TrayPublishDir)"' />
+  </Target>
 </Project>

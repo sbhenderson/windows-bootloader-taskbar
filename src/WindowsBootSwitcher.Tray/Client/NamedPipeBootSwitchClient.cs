@@ -59,7 +59,7 @@ public sealed class NamedPipeBootSwitchClient : BootSwitchClient
 
             try
             {
-                pipe.Connect(ConnectTimeoutMilliseconds);
+                await pipe.ConnectAsync(ConnectTimeoutMilliseconds, cancellationToken).ConfigureAwait(false);
                 return;
             }
             catch (TimeoutException) when (attempt < MaxConnectAttempts)
@@ -68,12 +68,18 @@ public sealed class NamedPipeBootSwitchClient : BootSwitchClient
             catch (IOException) when (attempt < MaxConnectAttempts)
             {
             }
+            catch (TimeoutException exception)
+            {
+                throw new IOException("Unable to connect to the Windows Boot Switcher service after multiple attempts.", exception);
+            }
+            catch (IOException exception)
+            {
+                throw new IOException("Unable to connect to the Windows Boot Switcher service after multiple attempts.", exception);
+            }
 
             await Task.Delay(backoffMilliseconds, cancellationToken).ConfigureAwait(false);
             backoffMilliseconds = Math.Min(backoffMilliseconds * 2, MaxBackoffMilliseconds);
         }
-
-        pipe.Connect(ConnectTimeoutMilliseconds);
     }
 
     private static async Task WriteRequestAsync<TRequest>(

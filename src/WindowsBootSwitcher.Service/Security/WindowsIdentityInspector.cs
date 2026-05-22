@@ -9,8 +9,7 @@ public class WindowsIdentityInspector
     {
         ArgumentNullException.ThrowIfNull(identity);
 
-        var principal = new WindowsPrincipal(identity);
-        var isAdministrator = principal.IsInRole(WindowsBuiltInRole.Administrator);
+        var isAdministrator = HasSid(identity, WellKnownSidType.BuiltinAdministratorsSid);
         var isLocalInteractiveUser = HasSid(identity, WellKnownSidType.InteractiveSid);
 
         return new CallerIdentity(isLocalInteractiveUser, isAdministrator);

@@ -40,13 +40,13 @@ public sealed class EventLogWriter : IDisposable
 
     private static void EnsureSourceExists()
     {
-        if (EventLog.SourceExists(SourceName))
-        {
-            return;
-        }
-
         try
         {
+            if (EventLog.SourceExists(SourceName))
+            {
+                return;
+            }
+
             EventLog.CreateEventSource(new EventSourceCreationData(SourceName, LogName));
         }
         catch (Exception exception) when (exception is UnauthorizedAccessException or System.Security.SecurityException or System.ComponentModel.Win32Exception)

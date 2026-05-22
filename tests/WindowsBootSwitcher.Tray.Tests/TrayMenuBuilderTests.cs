@@ -65,10 +65,26 @@ public sealed class TrayMenuBuilderTests
         Assert.True(model.Items[1].IsDisabled);
         Assert.True(model.Items[2].IsDisabled);
         Assert.True(model.Items[3].IsDisabled);
-        Assert.True(model.Items[3].Children.All(child => child.IsDisabled));
+        Assert.True(model.Items[4].Children.All(child => child.IsDisabled));
         Assert.True(model.Items[4].IsDisabled);
         Assert.True(model.Items[5].IsSeparator);
         Assert.True(model.Items[6].IsEnabled);
         Assert.True(model.Items[7].IsEnabled);
+    }
+
+    [Fact]
+    public void Build_connected_state_marks_off_timeout_when_timeout_is_zero()
+    {
+        var bootState = new BootState(
+            CurrentDefaultEntryId: "entry-1",
+            TimeoutSeconds: 0,
+            Entries: ImmutableArray.Create(
+                new BootEntry("entry-1", "Windows 11", true),
+                new BootEntry("entry-2", "Linux", false)));
+
+        var model = TrayMenuBuilder.Build(TrayState.Available(bootState));
+
+        Assert.True(model.Items[3].Children[0].IsChecked);
+        Assert.False(model.Items[3].Children[1].IsChecked);
     }
 }

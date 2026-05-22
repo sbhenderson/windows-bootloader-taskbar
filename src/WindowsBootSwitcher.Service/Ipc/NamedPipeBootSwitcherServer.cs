@@ -1,7 +1,7 @@
 using System.Buffers;
 using System.Diagnostics;
-using System.Runtime.InteropServices;
 using System.IO.Pipes;
+using System.Runtime.InteropServices;
 using System.Security.Principal;
 using System.Text.Json;
 using WindowsBootSwitcher.Contracts.Responses;
@@ -34,17 +34,25 @@ public sealed class NamedPipeBootSwitcherServer
 
         while (!cancellationToken.IsCancellationRequested)
         {
-            using var pipe = CreatePipe();
+            NamedPipeServerStream? pipe = null;
 
             try
             {
+                pipe = CreatePipe();
                 await pipe.WaitForConnectionAsync(cancellationToken).ConfigureAwait(false);
                 inFlight.Add(HandleClientAsync(pipe, cancellationToken));
+                pipe = null;
                 inFlight.RemoveAll(task => task.IsCompleted);
             }
             catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
             {
-                return;
+                pipe?.Dispose();
+                break;
+            }
+            catch (Exception exception)
+            {
+                pipe?.Dispose();
+                _eventLogWriter.WriteError("Failed while accepting an IPC client connection.", exception);
             }
         }
 
@@ -53,46 +61,49 @@ public sealed class NamedPipeBootSwitcherServer
 
     private async Task HandleClientAsync(NamedPipeServerStream pipe, CancellationToken cancellationToken)
     {
-        try
+        using (pipe)
         {
-            if (!IsLocalClient(pipe))
+            try
             {
-                _eventLogWriter.WriteWarning("Rejected a remote IPC client.");
-                await WriteResponseAsync(pipe, new BootOperationResponse(false, "remote_client_rejected", "Remote clients are not allowed.", null), cancellationToken).ConfigureAwait(false);
-                return;
-            }
+                if (!IsLocalClient(pipe))
+                {
+                    _eventLogWriter.WriteWarning("Rejected a remote IPC client.");
+                    await WriteResponseAsync(pipe, new BootOperationResponse(false, "remote_client_rejected", "Remote clients are not allowed.", null), cancellationToken).ConfigureAwait(false);
+                    return;
+                }
 
-            using var requestDocument = await ReadRequestAsync(pipe, cancellationToken).ConfigureAwait(false);
-            if (!TryGetCommandEnvelope(requestDocument.RootElement, out var commandName, out var payload))
+                using var requestDocument = await ReadRequestAsync(pipe, cancellationToken).ConfigureAwait(false);
+                if (!TryGetCommandEnvelope(requestDocument.RootElement, out var commandName, out var payload))
+                {
+                    await WriteResponseAsync(pipe, new BootOperationResponse(false, "invalid_request", "The request must contain a command name.", null), cancellationToken).ConfigureAwait(false);
+                    _eventLogWriter.WriteWarning("Rejected an IPC request without a command name.");
+                    return;
+                }
+
+                var callerIdentity = GetCallerIdentity(pipe);
+                var response = _router.Route(commandName, payload, callerIdentity);
+                await WriteResponseAsync(pipe, response, cancellationToken).ConfigureAwait(false);
+
+                if (!response.Success)
+                {
+                    _eventLogWriter.WriteWarning($"IPC command '{commandName}' failed: {response.ErrorCode} - {response.ErrorMessage}");
+                }
+            }
+            catch (JsonException exception)
             {
-                await WriteResponseAsync(pipe, new BootOperationResponse(false, "invalid_request", "The request must contain a command name.", null), cancellationToken).ConfigureAwait(false);
-                _eventLogWriter.WriteWarning("Rejected an IPC request without a command name.");
-                return;
+                _eventLogWriter.WriteWarning("Rejected an invalid IPC request.", exception);
+                await WriteResponseAsync(pipe, new BootOperationResponse(false, "invalid_request", "The request payload was not valid JSON.", null), cancellationToken).ConfigureAwait(false);
             }
-
-            var callerIdentity = GetCallerIdentity(pipe);
-            var response = _router.Route(commandName, payload, callerIdentity);
-            await WriteResponseAsync(pipe, response, cancellationToken).ConfigureAwait(false);
-
-            if (!response.Success)
+            catch (EndOfStreamException exception)
             {
-                _eventLogWriter.WriteWarning($"IPC command '{commandName}' failed: {response.ErrorCode} - {response.ErrorMessage}");
+                _eventLogWriter.WriteWarning("Rejected a truncated IPC request.", exception);
+                await WriteResponseAsync(pipe, new BootOperationResponse(false, "invalid_request", "The request payload was truncated.", null), cancellationToken).ConfigureAwait(false);
             }
-        }
-        catch (JsonException exception)
-        {
-            _eventLogWriter.WriteWarning("Rejected an invalid IPC request.", exception);
-            await WriteResponseAsync(pipe, new BootOperationResponse(false, "invalid_request", "The request payload was not valid JSON.", null), cancellationToken).ConfigureAwait(false);
-        }
-        catch (EndOfStreamException exception)
-        {
-            _eventLogWriter.WriteWarning("Rejected a truncated IPC request.", exception);
-            await WriteResponseAsync(pipe, new BootOperationResponse(false, "invalid_request", "The request payload was truncated.", null), cancellationToken).ConfigureAwait(false);
-        }
-        catch (Exception exception)
-        {
-            _eventLogWriter.WriteError("Unexpected failure while processing an IPC request.", exception);
-            await WriteResponseAsync(pipe, new BootOperationResponse(false, "internal_error", "The service encountered an unexpected error.", null), cancellationToken).ConfigureAwait(false);
+            catch (Exception exception)
+            {
+                _eventLogWriter.WriteError("Unexpected failure while processing an IPC request.", exception);
+                await WriteResponseAsync(pipe, new BootOperationResponse(false, "internal_error", "The service encountered an unexpected error.", null), cancellationToken).ConfigureAwait(false);
+            }
         }
     }
 
@@ -200,9 +211,26 @@ public sealed class NamedPipeBootSwitcherServer
             return false;
         }
 
-        var remoteName = clientComputerName.ToString();
+        var remoteName = NormalizeComputerName(clientComputerName.ToString());
         var netbiosName = remoteName.Split('.')[0];
         return string.Equals(netbiosName, Environment.MachineName, StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static string NormalizeComputerName(string rawClientName)
+    {
+        var normalized = rawClientName.Trim();
+        while (normalized.StartsWith(@"\\", StringComparison.Ordinal))
+        {
+            normalized = normalized[2..];
+        }
+
+        if (string.Equals(normalized, ".", StringComparison.Ordinal) ||
+            string.Equals(normalized, "localhost", StringComparison.OrdinalIgnoreCase))
+        {
+            return Environment.MachineName;
+        }
+
+        return normalized;
     }
 
     [DllImport("kernel32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
