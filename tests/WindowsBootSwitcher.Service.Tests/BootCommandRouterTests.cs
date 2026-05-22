@@ -37,6 +37,18 @@ public sealed class BootCommandRouterTests
     }
 
     [Fact]
+    public void Route_rejects_get_state_for_non_interactive_non_admin_callers()
+    {
+        var router = CreateRouter();
+        using var request = JsonDocument.Parse("{}");
+
+        var response = router.Route("get_state", request.RootElement, new CallerIdentity(false, false));
+
+        Assert.False(response.Success);
+        Assert.Equal("access_denied", response.ErrorCode);
+    }
+
+    [Fact]
     public void Route_rejects_mutating_commands_for_non_admins()
     {
         var router = CreateRouter();

@@ -32,4 +32,12 @@ public sealed class CallerAuthorizationPolicyTests
         Assert.False(_policy.CanMutate(readOnlyCaller));
         Assert.True(_policy.CanMutate(adminCaller));
     }
+
+    [Fact]
+    public void CanRead_denies_non_interactive_non_admin_callers()
+    {
+        var caller = new CallerIdentity(IsLocalInteractiveUser: false, IsLocalAdministrator: false);
+
+        Assert.False(_policy.CanRead(caller));
+    }
 }

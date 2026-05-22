@@ -31,7 +31,7 @@ public sealed class EventLogWriter : IDisposable
     }
 
     private static string FormatMessage(string message, Exception exception) =>
-        $"{message} {exception.GetType().Name}: {exception.Message}";
+        $"{message} {exception}";
 
     private void WriteEntry(string message, EventLogEntryType type)
     {
@@ -45,6 +45,12 @@ public sealed class EventLogWriter : IDisposable
             return;
         }
 
-        EventLog.CreateEventSource(new EventSourceCreationData(SourceName, LogName));
+        try
+        {
+            EventLog.CreateEventSource(new EventSourceCreationData(SourceName, LogName));
+        }
+        catch (Exception exception) when (exception is UnauthorizedAccessException or System.Security.SecurityException or System.ComponentModel.Win32Exception)
+        {
+        }
     }
 }

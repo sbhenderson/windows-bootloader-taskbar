@@ -13,6 +13,7 @@ namespace WindowsBootSwitcher.Service.Ipc;
 public sealed class NamedPipeBootSwitcherServer
 {
     private const string PipeName = "WindowsBootSwitcher";
+    private const int MaxRequestBytes = 64 * 1024;
     private readonly BootCommandRouter _router;
     private readonly WindowsIdentityInspector _identityInspector;
     private readonly EventLogWriter _eventLogWriter;
@@ -29,6 +30,8 @@ public sealed class NamedPipeBootSwitcherServer
 
     public async Task RunAsync(CancellationToken cancellationToken)
     {
+        var inFlight = new List<Task>();
+
         while (!cancellationToken.IsCancellationRequested)
         {
             using var pipe = CreatePipe();
@@ -36,13 +39,16 @@ public sealed class NamedPipeBootSwitcherServer
             try
             {
                 await pipe.WaitForConnectionAsync(cancellationToken).ConfigureAwait(false);
-                await HandleClientAsync(pipe, cancellationToken).ConfigureAwait(false);
+                inFlight.Add(HandleClientAsync(pipe, cancellationToken));
+                inFlight.RemoveAll(task => task.IsCompleted);
             }
             catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
             {
                 return;
             }
         }
+
+        await Task.WhenAll(inFlight).ConfigureAwait(false);
     }
 
     private async Task HandleClientAsync(NamedPipeServerStream pipe, CancellationToken cancellationToken)
@@ -122,6 +128,10 @@ public sealed class NamedPipeBootSwitcherServer
                 }
 
                 buffer.Write(rentedBuffer, 0, bytesRead);
+                if (buffer.Length > MaxRequestBytes)
+                {
+                    throw new InvalidOperationException("The request payload exceeded the maximum allowed size.");
+                }
 
                 if (pipe.IsMessageComplete)
                 {
@@ -190,7 +200,9 @@ public sealed class NamedPipeBootSwitcherServer
             return false;
         }
 
-        return string.Equals(clientComputerName.ToString(), Environment.MachineName, StringComparison.OrdinalIgnoreCase);
+        var remoteName = clientComputerName.ToString();
+        var netbiosName = remoteName.Split('.')[0];
+        return string.Equals(netbiosName, Environment.MachineName, StringComparison.OrdinalIgnoreCase);
     }
 
     [DllImport("kernel32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
