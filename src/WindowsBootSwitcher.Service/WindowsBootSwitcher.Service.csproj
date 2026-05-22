@@ -3,5 +3,6 @@
     <TargetFramework>net10.0-windows</TargetFramework>
     <OutputType>Exe</OutputType>
     <RootNamespace>WindowsBootSwitcher.Service</RootNamespace>
+    <PublishAot>true</PublishAot>
   </PropertyGroup>
 </Project>
