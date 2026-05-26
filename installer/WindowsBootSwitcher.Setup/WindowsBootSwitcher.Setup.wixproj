@@ -20,8 +20,8 @@
   <Target Name="PublishPayloads" BeforeTargets="Build">
     <MakeDir Directories="$(ServicePublishDir);$(TrayPublishDir)" />
     <Exec
-      Command='dotnet publish "$(ServiceProject)" -c $(Configuration) -p:Platform=x64 -r win-x64 --self-contained true -p:PublishAot=true -o "$(ServicePublishDir)"' />
+      Command='dotnet publish "$(ServiceProject)" -c $(Configuration) -p:Platform=x64 -r win-x64 -o "$(ServicePublishDir)"' />
     <Exec
-      Command='dotnet publish "$(TrayProject)" -c $(Configuration) -p:Platform=x64 -r win-x64 --self-contained true -o "$(TrayPublishDir)"' />
+      Command='dotnet publish "$(TrayProject)" -c $(Configuration) -p:Platform=x64 -r win-x64 -o "$(TrayPublishDir)"' />
   </Target>
 </Project>

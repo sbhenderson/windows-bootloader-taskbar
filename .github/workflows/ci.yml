@@ -26,11 +26,11 @@ jobs:
       - name: Test
         run: dotnet test WindowsBootSwitcher.sln -c Release -p:Platform=x64 --no-build
 
-      - name: Publish service
-        run: dotnet publish src\WindowsBootSwitcher.Service\WindowsBootSwitcher.Service.csproj -c Release -r win-x64 --self-contained true -p:PublishAot=true -o artifacts\service
+      # - name: Publish service
+      #   run: dotnet publish src\WindowsBootSwitcher.Service\WindowsBootSwitcher.Service.csproj -c Release -r win-x64 --self-contained true -p:PublishAot=true -o artifacts\service
 
-      - name: Publish tray
-        run: dotnet publish src\WindowsBootSwitcher.Tray\WindowsBootSwitcher.Tray.csproj -c Release -r win-x64 --self-contained true -o artifacts\tray
+      # - name: Publish tray
+      #   run: dotnet publish src\WindowsBootSwitcher.Tray\WindowsBootSwitcher.Tray.csproj -c Release -r win-x64 --self-contained true -o artifacts\tray
 
       - name: Build installer
         run: dotnet build installer\WindowsBootSwitcher.Setup\WindowsBootSwitcher.Setup.wixproj -c Release -p:Platform=x64 --no-restore
@@ -40,6 +40,6 @@ jobs:
         with:
           name: windows-boot-switcher
           path: |
-            artifacts\service
-            artifacts\tray
+            # artifacts\service
+            # artifacts\tray
             installer\WindowsBootSwitcher.Setup\bin\x64\Release\WindowsBootSwitcher.Setup.msi
