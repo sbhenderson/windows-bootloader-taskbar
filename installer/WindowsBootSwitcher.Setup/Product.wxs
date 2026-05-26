@@ -15,7 +15,7 @@
     Name="Windows Boot Switcher"
     Manufacturer="Windows Boot Switcher"
     Version="1.0.0.0"
-    UpgradeCode="9E3D9E84-8A8A-4B6F-9B2D-0D4C1B4B9A6A"
+    UpgradeCode="9E359E84-8B8E-4B6F-9B2D-0D4C1B4B9A6A"
     Scope="perMachine"
     InstallerVersion="500"
     Compressed="yes">
