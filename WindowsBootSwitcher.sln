@@ -8,8 +8,6 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "WindowsBootSwitcher.Service
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "WindowsBootSwitcher.Tray", "src\WindowsBootSwitcher.Tray\WindowsBootSwitcher.Tray.csproj", "{C0B2F6B8-6CF4-4C0A-8F38-6DAED9E2A6B9}"
 EndProject
-Project("{930C7802-8A8C-48F9-8165-68863BCCD9DD}") = "WindowsBootSwitcher.Setup", "installer\WindowsBootSwitcher.Setup\WindowsBootSwitcher.Setup.wixproj", "{88C73113-4E17-4FB1-9A0C-2D9F2E24F08B}"
-EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "WindowsBootSwitcher.Contracts.Tests", "tests\WindowsBootSwitcher.Contracts.Tests\WindowsBootSwitcher.Contracts.Tests.csproj", "{A1AC7E4D-7E3C-41F1-8B1F-1E5E4D8A1B23}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "WindowsBootSwitcher.Service.Tests", "tests\WindowsBootSwitcher.Service.Tests\WindowsBootSwitcher.Service.Tests.csproj", "{C8FD7862-3A72-4E2D-B0C4-8E0B7AE6F5D4}"
@@ -42,10 +40,6 @@ Global
 		{C0B2F6B8-6CF4-4C0A-8F38-6DAED9E2A6B9}.Debug|x64.Build.0 = Debug|x64
 		{C0B2F6B8-6CF4-4C0A-8F38-6DAED9E2A6B9}.Release|x64.ActiveCfg = Release|x64
 		{C0B2F6B8-6CF4-4C0A-8F38-6DAED9E2A6B9}.Release|x64.Build.0 = Release|x64
-		{88C73113-4E17-4FB1-9A0C-2D9F2E24F08B}.Debug|x64.ActiveCfg = Debug|x64
-		{88C73113-4E17-4FB1-9A0C-2D9F2E24F08B}.Debug|x64.Build.0 = Debug|x64
-		{88C73113-4E17-4FB1-9A0C-2D9F2E24F08B}.Release|x64.ActiveCfg = Release|x64
-		{88C73113-4E17-4FB1-9A0C-2D9F2E24F08B}.Release|x64.Build.0 = Release|x64
 		{A1AC7E4D-7E3C-41F1-8B1F-1E5E4D8A1B23}.Debug|x64.ActiveCfg = Debug|x64
 		{A1AC7E4D-7E3C-41F1-8B1F-1E5E4D8A1B23}.Debug|x64.Build.0 = Debug|x64
 		{A1AC7E4D-7E3C-41F1-8B1F-1E5E4D8A1B23}.Release|x64.ActiveCfg = Release|x64
