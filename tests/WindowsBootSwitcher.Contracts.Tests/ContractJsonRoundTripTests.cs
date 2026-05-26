@@ -1,4 +1,4 @@
-using System.Collections.Immutable;
+﻿using System.Collections.Immutable;
 using System.Text.Json;
 using WindowsBootSwitcher.Contracts;
 using WindowsBootSwitcher.Contracts.Responses;
@@ -15,9 +15,8 @@ public sealed class ContractJsonRoundTripTests
         var state = new BootState(
             CurrentDefaultEntryId: "entry-1",
             TimeoutSeconds: 30,
-            Entries: ImmutableArray.Create(
-                new BootEntry("entry-1", "Windows Boot Manager", true),
-                new BootEntry("entry-2", "Linux", false)));
+            Entries: [new BootEntry("entry-1", "Windows Boot Manager", true),
+                      new BootEntry("entry-2", "Linux", false)]);
 
         var json = JsonSerializer.Serialize(state, ContractsJsonContext.Default.BootState);
         var roundTripped = JsonSerializer.Deserialize(json, ContractsJsonContext.Default.BootState);
@@ -41,7 +40,7 @@ public sealed class ContractJsonRoundTripTests
         var state = new BootState(
             CurrentDefaultEntryId: "entry-1",
             TimeoutSeconds: 30,
-            Entries: ImmutableArray.Create(new BootEntry("entry-1", "Windows Boot Manager", true)));
+            Entries: [new BootEntry("entry-1", "Windows Boot Manager", true)]);
 
         var response = new BootOperationResponse(
             Success: true,

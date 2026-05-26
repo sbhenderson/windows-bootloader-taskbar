@@ -1,4 +1,4 @@
-using System.Collections.Immutable;
+﻿using System.Collections.Immutable;
 using System.Management;
 
 namespace WindowsBootSwitcher.Service.Boot;
@@ -19,7 +19,7 @@ public sealed class WmiBootConfigurationAdapter : IBootConfigurationAdapter
             using var store = GetStore();
             var defaultEntryId = ReadDefaultEntryId(store);
             var timeoutSeconds = ReadTimeoutSeconds();
-            var entries = ReadEntries(defaultEntryId);
+            var entries = ReadEntries();
 
             return new BootConfigurationSnapshot(defaultEntryId, timeoutSeconds, entries);
         }
@@ -113,7 +113,7 @@ public sealed class WmiBootConfigurationAdapter : IBootConfigurationAdapter
         return Convert.ToInt32(outParameters?["Integer"], System.Globalization.CultureInfo.InvariantCulture);
     }
 
-    private static ImmutableArray<BootConfigurationEntry> ReadEntries(string? defaultEntryId)
+    private static ImmutableArray<BootConfigurationEntry> ReadEntries()
     {
         using var searcher = new ManagementObjectSearcher(
             new ManagementScope(RootNamespace),
@@ -122,7 +122,7 @@ public sealed class WmiBootConfigurationAdapter : IBootConfigurationAdapter
 
         var builder = ImmutableArray.CreateBuilder<BootConfigurationEntry>();
 
-        foreach (ManagementObject obj in results)
+        foreach (var obj in results.Cast<ManagementObject>())
         {
             using var current = obj;
 
@@ -151,12 +151,7 @@ public sealed class WmiBootConfigurationAdapter : IBootConfigurationAdapter
 
     private static uint ReadUInt32(ManagementBaseObject obj, string propertyName)
     {
-        var value = obj[propertyName];
-        if (value is null)
-        {
-            throw new BootConfigurationException("missing_property", $"BCD property '{propertyName}' was not present.");
-        }
-
+        var value = obj[propertyName] ?? throw new BootConfigurationException("missing_property", $"BCD property '{propertyName}' was not present.");
         return Convert.ToUInt32(value, System.Globalization.CultureInfo.InvariantCulture);
     }
 
@@ -165,7 +160,7 @@ public sealed class WmiBootConfigurationAdapter : IBootConfigurationAdapter
         using var searcher = new ManagementObjectSearcher(new ManagementScope(RootNamespace), new ObjectQuery(query));
         using var results = searcher.Get();
 
-        foreach (ManagementObject obj in results)
+        foreach (var obj in results.Cast<ManagementObject>())
         {
             if (objectId is null)
             {

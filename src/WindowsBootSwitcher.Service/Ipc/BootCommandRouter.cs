@@ -1,4 +1,4 @@
-using System.Text.Json;
+﻿using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Text.Json.Serialization.Metadata;
 using WindowsBootSwitcher.Contracts.Requests;
@@ -9,16 +9,10 @@ using WindowsBootSwitcher.Service.Security;
 
 namespace WindowsBootSwitcher.Service.Ipc;
 
-public sealed class BootCommandRouter
+public sealed class BootCommandRouter(BootConfigurationService bootConfigurationService, CallerAuthorizationPolicy authorizationPolicy)
 {
-    private readonly BootConfigurationService _bootConfigurationService;
-    private readonly CallerAuthorizationPolicy _authorizationPolicy;
-
-    public BootCommandRouter(BootConfigurationService bootConfigurationService, CallerAuthorizationPolicy authorizationPolicy)
-    {
-        _bootConfigurationService = bootConfigurationService ?? throw new ArgumentNullException(nameof(bootConfigurationService));
-        _authorizationPolicy = authorizationPolicy ?? throw new ArgumentNullException(nameof(authorizationPolicy));
-    }
+    private readonly BootConfigurationService _bootConfigurationService = bootConfigurationService ?? throw new ArgumentNullException(nameof(bootConfigurationService));
+    private readonly CallerAuthorizationPolicy _authorizationPolicy = authorizationPolicy ?? throw new ArgumentNullException(nameof(authorizationPolicy));
 
     public BootOperationResponse Route(string commandName, JsonElement payload, CallerIdentity caller)
     {

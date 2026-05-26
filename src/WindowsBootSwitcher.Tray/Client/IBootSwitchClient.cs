@@ -1,9 +1,9 @@
-using WindowsBootSwitcher.Contracts;
+﻿using WindowsBootSwitcher.Contracts;
 using WindowsBootSwitcher.Contracts.Responses;
 
 namespace WindowsBootSwitcher.Tray.Client;
 
-public interface BootSwitchClient
+public interface IBootSwitchClient
 {
     Task<BootOperationResponse> GetStateAsync(CancellationToken cancellationToken);
 

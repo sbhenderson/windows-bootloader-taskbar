@@ -1,4 +1,4 @@
-using System.Collections.Immutable;
+﻿using System.Collections.Immutable;
 using System.Linq;
 using WindowsBootSwitcher.Contracts;
 
@@ -124,17 +124,17 @@ public sealed record TrayMenuItem
     public bool IsSeparator { get; }
 
     public static TrayMenuItem Action(string text, TrayMenuCommandKind commandKind, string? commandArgument = null, bool isEnabled = true, bool isChecked = false)
-        => new(text, isEnabled, isChecked, commandKind, commandArgument, ImmutableArray<TrayMenuItem>.Empty, false);
+        => new(text, isEnabled, isChecked, commandKind, commandArgument, [], false);
 
     public static TrayMenuItem Header(string text)
-        => new(text, false, false, null, null, ImmutableArray<TrayMenuItem>.Empty, false);
+        => new(text, false, false, null, null, [], false);
 
     public static TrayMenuItem Status(string text)
-        => new(text, false, false, null, null, ImmutableArray<TrayMenuItem>.Empty, false);
+        => new(text, false, false, null, null, [], false);
 
     public static TrayMenuItem Submenu(string text, ImmutableArray<TrayMenuItem> children, bool isEnabled = true)
         => new(text, isEnabled, false, null, null, children, false);
 
     public static TrayMenuItem Separator()
-        => new(string.Empty, false, false, null, null, ImmutableArray<TrayMenuItem>.Empty, true);
+        => new(string.Empty, false, false, null, null, [], true);
 }

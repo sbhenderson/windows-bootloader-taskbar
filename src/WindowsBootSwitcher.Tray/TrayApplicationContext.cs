@@ -1,4 +1,4 @@
-using System.Drawing;
+﻿using System.Drawing;
 using System.Windows.Forms;
 using WindowsBootSwitcher.Contracts;
 using WindowsBootSwitcher.Tray.Client;
@@ -8,7 +8,7 @@ namespace WindowsBootSwitcher.Tray;
 
 public sealed class TrayApplicationContext : ApplicationContext
 {
-    private readonly BootSwitchClient _client;
+    private readonly IBootSwitchClient _client;
     private readonly TrayNotificationService _notifications;
     private readonly NotifyIcon _notifyIcon;
     private readonly ContextMenuStrip _contextMenu;
@@ -25,7 +25,7 @@ public sealed class TrayApplicationContext : ApplicationContext
     {
     }
 
-    internal TrayApplicationContext(BootSwitchClient client)
+    internal TrayApplicationContext(IBootSwitchClient client)
     {
         _client = client ?? throw new ArgumentNullException(nameof(client));
 

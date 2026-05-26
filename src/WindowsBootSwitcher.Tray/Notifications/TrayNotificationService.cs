@@ -1,17 +1,12 @@
-using System.Windows.Forms;
+﻿using System.Windows.Forms;
 
 namespace WindowsBootSwitcher.Tray.Notifications;
 
-public sealed class TrayNotificationService
+public sealed class TrayNotificationService(NotifyIcon notifyIcon)
 {
     private const int BalloonDurationMilliseconds = 3000;
     private const string Title = "Windows Boot Switcher";
-    private readonly NotifyIcon _notifyIcon;
-
-    public TrayNotificationService(NotifyIcon notifyIcon)
-    {
-        _notifyIcon = notifyIcon ?? throw new ArgumentNullException(nameof(notifyIcon));
-    }
+    private readonly NotifyIcon _notifyIcon = notifyIcon ?? throw new ArgumentNullException(nameof(notifyIcon));
 
     public void ShowSuccess(string message) => Show(message, ToolTipIcon.Info);
 

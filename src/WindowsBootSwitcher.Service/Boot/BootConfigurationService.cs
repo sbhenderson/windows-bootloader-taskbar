@@ -1,25 +1,18 @@
-using System.Collections.Immutable;
+﻿using System.Collections.Immutable;
 using WindowsBootSwitcher.Contracts;
 using WindowsBootSwitcher.Contracts.Requests;
 using WindowsBootSwitcher.Contracts.Responses;
 
 namespace WindowsBootSwitcher.Service.Boot;
 
-public sealed class BootConfigurationService
+public sealed class BootConfigurationService(
+    IBootConfigurationAdapter adapter,
+    BootEntryFilter? entryFilter = null,
+    BootTimeoutTranslator? timeoutTranslator = null)
 {
-    private readonly IBootConfigurationAdapter _adapter;
-    private readonly BootEntryFilter _entryFilter;
-    private readonly BootTimeoutTranslator _timeoutTranslator;
-
-    public BootConfigurationService(
-        IBootConfigurationAdapter adapter,
-        BootEntryFilter? entryFilter = null,
-        BootTimeoutTranslator? timeoutTranslator = null)
-    {
-        _adapter = adapter ?? throw new ArgumentNullException(nameof(adapter));
-        _entryFilter = entryFilter ?? new BootEntryFilter();
-        _timeoutTranslator = timeoutTranslator ?? new BootTimeoutTranslator();
-    }
+    private readonly IBootConfigurationAdapter _adapter = adapter ?? throw new ArgumentNullException(nameof(adapter));
+    private readonly BootEntryFilter _entryFilter = entryFilter ?? new BootEntryFilter();
+    private readonly BootTimeoutTranslator _timeoutTranslator = timeoutTranslator ?? new BootTimeoutTranslator();
 
     public BootState GetState()
     {

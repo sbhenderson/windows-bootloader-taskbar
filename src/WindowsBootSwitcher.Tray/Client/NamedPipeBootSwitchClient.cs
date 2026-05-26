@@ -1,4 +1,4 @@
-using System.Buffers;
+﻿using System.Buffers;
 using System.IO.Pipes;
 using System.Text.Json;
 using System.Text.Json.Serialization.Metadata;
@@ -9,7 +9,7 @@ using WindowsBootSwitcher.Contracts.Serialization;
 
 namespace WindowsBootSwitcher.Tray.Client;
 
-public sealed class NamedPipeBootSwitchClient : BootSwitchClient
+public sealed class NamedPipeBootSwitchClient : IBootSwitchClient
 {
     private const string PipeName = "WindowsBootSwitcher";
     private const int ConnectTimeoutMilliseconds = 250;
