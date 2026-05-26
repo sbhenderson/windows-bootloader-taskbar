@@ -24,16 +24,25 @@
       Condition="Installed OR DOTNET_DESKTOP_RUNTIME_10_X64" />
     <MajorUpgrade DowngradeErrorMessage="A newer version of [ProductName] is already installed." />
     <MediaTemplate EmbedCab="yes" />
+    <Feature Id="ProductFeature" Title="Windows Boot Switcher" Level="1">
+      <ComponentRef Id="WindowsBootSwitcherServiceComponent" />
+      <ComponentRef Id="TrayStartupRegistration" />
+      <ComponentGroupRef Id="ServicePayload" />
+      <ComponentGroupRef Id="TrayPayload" />
+    </Feature>
   </Package>
 
   <Fragment>
     <StandardDirectory Id="ProgramFiles64Folder">
-      <Directory Id="INSTALLFOLDER" Name="Windows Boot Switcher" />
+      <Directory Id="INSTALLFOLDER" Name="Windows Boot Switcher">
+        <Directory Id="SERVICEFOLDER" Name="Service" />
+        <Directory Id="TRAYFOLDER" Name="Tray" />
+      </Directory>
     </StandardDirectory>
   </Fragment>
 
   <Fragment>
-    <DirectoryRef Id="INSTALLFOLDER">
+    <DirectoryRef Id="SERVICEFOLDER">
       <Component Id="WindowsBootSwitcherServiceComponent" Guid="*">
         <File
           Id="WindowsBootSwitcherServiceExe"
@@ -62,13 +71,15 @@
           Remove="uninstall"
           Wait="yes" />
       </Component>
+    </DirectoryRef>
 
+    <DirectoryRef Id="TRAYFOLDER">
       <Component Id="TrayStartupRegistration" Guid="*">
         <RegistryValue
           Root="HKLM"
           Key="Software\Microsoft\Windows\CurrentVersion\Run"
           Name="WindowsBootSwitcherTray"
-          Value="&quot;[INSTALLFOLDER]WindowsBootSwitcher.Tray.exe&quot;"
+          Value="&quot;[TRAYFOLDER]WindowsBootSwitcher.Tray.exe&quot;"
           Type="string"
           KeyPath="yes" />
       </Component>
@@ -76,10 +87,17 @@
   </Fragment>
 
   <Fragment>
-    <Feature Id="ProductFeature" Title="Windows Boot Switcher" Level="1">
-      <ComponentRef Id="WindowsBootSwitcherServiceComponent" />
-      <ComponentRef Id="TrayStartupRegistration" />
-      <ComponentGroupRef Id="TrayPayload" />
-    </Feature>
+    <ComponentGroup Id="ServicePayload" Directory="SERVICEFOLDER">
+      <Files Include="$(var.ServicePublishDir)\**">
+        <Exclude Files="$(var.ServicePublishDir)\WindowsBootSwitcher.Service.exe" />
+      </Files>
+    </ComponentGroup>
   </Fragment>
+
+  <Fragment>
+    <ComponentGroup Id="TrayPayload" Directory="TRAYFOLDER">
+      <Files Include="$(var.TrayPublishDir)\**" />
+    </ComponentGroup>
+  </Fragment>
+
 </Wix>

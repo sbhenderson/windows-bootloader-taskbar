@@ -1,6 +1,7 @@
 <Project Sdk="WixToolset.Sdk/7.0.0">
   <PropertyGroup>
     <AcceptEula>wix7</AcceptEula>
+    <InstallerPlatform>x64</InstallerPlatform>
     <SuppressIces>ICE09;ICE32;ICE61;ICE71</SuppressIces>
     <ServiceProject>$(MSBuildProjectDirectory)\..\..\src\WindowsBootSwitcher.Service\WindowsBootSwitcher.Service.csproj</ServiceProject>
     <TrayProject>$(MSBuildProjectDirectory)\..\..\src\WindowsBootSwitcher.Tray\WindowsBootSwitcher.Tray.csproj</TrayProject>
@@ -9,19 +10,29 @@
     <DefineConstants>ServicePublishDir=$(ServicePublishDir);TrayPublishDir=$(TrayPublishDir)</DefineConstants>
   </PropertyGroup>
 
-  <ItemGroup>
-    <HarvestDirectory Include="$(TrayPublishDir)">
-      <ComponentGroupName>TrayPayload</ComponentGroupName>
-      <DirectoryRefId>INSTALLFOLDER</DirectoryRefId>
-      <SuppressRootDirectory>true</SuppressRootDirectory>
-    </HarvestDirectory>
-  </ItemGroup>
-
   <Target Name="PublishPayloads" BeforeTargets="Build">
+    <RemoveDir Directories="$(ServicePublishDir);$(TrayPublishDir)" />
     <MakeDir Directories="$(ServicePublishDir);$(TrayPublishDir)" />
     <Exec
       Command='dotnet publish "$(ServiceProject)" -c $(Configuration) -p:Platform=x64 -r win-x64 -o "$(ServicePublishDir)"' />
     <Exec
       Command='dotnet publish "$(TrayProject)" -c $(Configuration) -p:Platform=x64 -r win-x64 -o "$(TrayPublishDir)"' />
+  </Target>
+
+  <Target Name="WritePayloadManifest" AfterTargets="Build">
+    <ItemGroup>
+      <ServicePayloadFiles Include="$(ServicePublishDir)\**\*" />
+      <TrayPayloadFiles Include="$(TrayPublishDir)\**\*" />
+      <PayloadManifestLines Include="SERVICE PAYLOAD" />
+      <PayloadManifestLines Include="@(ServicePayloadFiles -> '%(Identity)')" />
+      <PayloadManifestLines Include="TRAY PAYLOAD" />
+      <PayloadManifestLines Include="@(TrayPayloadFiles -> '%(Identity)')" />
+    </ItemGroup>
+    <WriteLinesToFile
+      File="$(MSBuildProjectDirectory)\..\..\artifacts\service-verify\wix-payload-manifest.txt"
+      Lines="@(PayloadManifestLines)"
+      Overwrite="true"
+      WriteOnlyWhenDifferent="true" />
+    <Message Importance="high" Text="Wrote payload manifest to $(MSBuildProjectDirectory)\..\..\artifacts\service-verify\wix-payload-manifest.txt" />
   </Target>
 </Project>
