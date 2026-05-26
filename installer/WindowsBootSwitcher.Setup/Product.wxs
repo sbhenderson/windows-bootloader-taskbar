@@ -1,5 +1,16 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <Wix xmlns="http://wixtoolset.org/schemas/v4/wxs">
+  <Fragment>
+    <Property Id="DOTNET_DESKTOP_RUNTIME_10_X64">
+      <RegistrySearch
+        Id="DotNetDesktopRuntime10X64Search"
+        Root="HKLM"
+        Key="SOFTWARE\dotnet\Setup\InstalledVersions\x64\sharedfx\Microsoft.WindowsDesktop.App"
+        Name="10.0"
+        Type="raw" />
+    </Property>
+  </Fragment>
+
   <Package
     Name="Windows Boot Switcher"
     Manufacturer="Windows Boot Switcher"
@@ -8,6 +19,9 @@
     Scope="perMachine"
     InstallerVersion="500"
     Compressed="yes">
+    <Launch
+      Message="Windows Boot Switcher requires Microsoft .NET Desktop Runtime 10 (x64). Install the runtime and run setup again."
+      Condition="Installed OR DOTNET_DESKTOP_RUNTIME_10_X64" />
     <MajorUpgrade DowngradeErrorMessage="A newer version of [ProductName] is already installed." />
     <MediaTemplate EmbedCab="yes" />
   </Package>
