@@ -73,6 +73,21 @@ public sealed class BootCommandRouterTests
         Assert.Equal(0, response.State!.TimeoutSeconds);
     }
 
+    [Fact]
+    public void Route_maps_boot_configuration_failures_during_get_state_to_error_code()
+    {
+        var router = new BootCommandRouter(
+            new BootConfigurationService(new ThrowingBootConfigurationAdapter()),
+            new CallerAuthorizationPolicy());
+        using var request = JsonDocument.Parse("{}");
+
+        var response = router.Route("get_state", request.RootElement, new CallerIdentity(true, false));
+
+        Assert.False(response.Success);
+        Assert.Equal("wmi_error", response.ErrorCode);
+        Assert.Null(response.State);
+    }
+
     private static BootCommandRouter CreateRouter()
     {
         var adapter = new FakeBootConfigurationAdapter(
@@ -87,6 +102,16 @@ public sealed class BootCommandRouterTests
         var policy = new CallerAuthorizationPolicy();
 
         return new BootCommandRouter(service, policy);
+    }
+
+    private sealed class ThrowingBootConfigurationAdapter : IBootConfigurationAdapter
+    {
+        public BootConfigurationSnapshot ReadState() =>
+            throw new BootConfigurationException("wmi_error", "Failed to read boot configuration from WMI.");
+
+        public void SetDefaultEntry(string entryId) => throw new NotSupportedException();
+
+        public void SetTimeout(int timeoutSeconds) => throw new NotSupportedException();
     }
 
     private sealed class FakeBootConfigurationAdapter : IBootConfigurationAdapter

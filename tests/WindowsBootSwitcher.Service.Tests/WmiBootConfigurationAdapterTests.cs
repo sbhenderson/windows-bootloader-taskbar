@@ -1,7 +1,8 @@
 using System.Reflection;
+using WindowsBootSwitcher.Service.Boot;
 using Xunit;
 
-namespace WindowsBootSwitcher.Service.Boot;
+namespace WindowsBootSwitcher.Service.Tests;
 
 public sealed class WmiBootConfigurationAdapterTests
 {

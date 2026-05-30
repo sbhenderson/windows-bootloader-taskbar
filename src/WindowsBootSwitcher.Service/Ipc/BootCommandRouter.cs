@@ -37,7 +37,14 @@ public sealed class BootCommandRouter(BootConfigurationService bootConfiguration
             return new BootOperationResponse(false, "access_denied", "The caller is not authorized to read boot state.", null);
         }
 
-        return new BootOperationResponse(true, null, null, _bootConfigurationService.GetState());
+        try
+        {
+            return new BootOperationResponse(true, null, null, _bootConfigurationService.GetState());
+        }
+        catch (BootConfigurationException exception)
+        {
+            return new BootOperationResponse(false, exception.ErrorCode, exception.Message, null);
+        }
     }
 
     private BootOperationResponse RouteSetDefaultEntry(JsonElement payload, CallerIdentity caller)
