@@ -10,14 +10,14 @@
     <DefineConstants>ServicePublishDir=$(ServicePublishDir);TrayPublishDir=$(TrayPublishDir)</DefineConstants>
   </PropertyGroup>
 
-  <Target Name="PublishPayloads" BeforeTargets="Build">
+  <!--<Target Name="PublishPayloads" BeforeTargets="Build">
     <RemoveDir Directories="$(ServicePublishDir);$(TrayPublishDir)" />
     <MakeDir Directories="$(ServicePublishDir);$(TrayPublishDir)" />
     <Exec
       Command='dotnet publish "$(ServiceProject)" -c $(Configuration) -p:Platform=x64 -r win-x64 -o "$(ServicePublishDir)"' />
     <Exec
       Command='dotnet publish "$(TrayProject)" -c $(Configuration) -p:Platform=x64 -r win-x64 -o "$(TrayPublishDir)"' />
-  </Target>
+  </Target>-->
 
   <Target Name="WritePayloadManifest" AfterTargets="Build">
     <ItemGroup>
