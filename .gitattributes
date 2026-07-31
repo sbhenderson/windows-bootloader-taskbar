@@ -1,0 +1,22 @@
+# Normalise line endings to LF in the repository and in the working tree.
+# This deliberately overrides a user's global core.autocrlf setting so every
+# clone gets identical bytes regardless of platform.
+* text=auto eol=lf
+
+# Batch files stay CRLF because cmd.exe can mishandle LF-only scripts.
+*.bat text eol=crlf
+*.cmd text eol=crlf
+
+# Binary assets must never be line-ending converted.
+*.png  binary
+*.jpg  binary
+*.jpeg binary
+*.gif  binary
+*.ico  binary
+*.snk  binary
+*.pfx  binary
+*.dll  binary
+*.exe  binary
+*.msi  binary
+*.cab  binary
+*.zip  binary

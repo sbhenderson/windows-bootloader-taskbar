@@ -103,7 +103,9 @@ stable string error code; the service maps these to `BootOperationResponse` erro
   `Console`. Warnings for rejected/invalid requests, errors for unexpected failures.
 - **Immutability**: prefer `record` / `record struct` for state and DTOs (see `TrayState`,
   `CallerIdentity`, contract types); `ImmutableArray<T>` for collections from WMI.
-- **Files** are UTF-8 **with BOM**, CRLF line endings, 4-space indent (`.editorconfig`).
+- **Files** are UTF-8 **with BOM** for source/project files, **LF** line endings, 4-space indent
+  (`.editorconfig`). `.gitattributes` pins `* text=auto eol=lf`, so LF applies in the working tree
+  too even when a contributor has `core.autocrlf=true`. Only `.bat`/`.cmd` stay CRLF.
 - **Namespaces/prefix**: everything is under `WindowsBootSwitcher.*`. Test projects mirror
   the source namespace with a `.Tests` suffix and live under `tests/`.
 
