@@ -19,6 +19,9 @@ public sealed class TrayApplicationContext : ApplicationContext
     private TrayState _state = TrayState.Connecting();
     private TimeSpan _nextRetryDelay = TimeSpan.FromSeconds(1);
     private bool _hasShownUnavailableNotification;
+    private bool _isDisposed;
+    private bool _isMutating;
+    private bool _refreshRequestedWhileBusy;
 
     public TrayApplicationContext()
         : this(new NamedPipeBootSwitchClient())
@@ -63,7 +66,7 @@ public sealed class TrayApplicationContext : ApplicationContext
 
     private void QueueRefresh()
     {
-        if (_lifetimeCts.IsCancellationRequested)
+        if (_isDisposed || _lifetimeCts.IsCancellationRequested)
         {
             return;
         }
@@ -73,14 +76,26 @@ public sealed class TrayApplicationContext : ApplicationContext
 
     private async Task RefreshStateAsync()
     {
+        if (_isDisposed)
+        {
+            return;
+        }
+
         if (!await _refreshGate.WaitAsync(0, _lifetimeCts.Token).ConfigureAwait(true))
         {
+            // Do not silently drop the request; run it once the in-flight refresh finishes.
+            _refreshRequestedWhileBusy = true;
             return;
         }
 
         try
         {
             var response = await _client.GetStateAsync(_lifetimeCts.Token).ConfigureAwait(true);
+            if (_isDisposed)
+            {
+                return;
+            }
+
             if (response.Success && response.State is not null)
             {
                 var wasUnavailable = _state.ConnectionStatus != TrayConnectionStatus.Available;
@@ -98,10 +113,14 @@ public sealed class TrayApplicationContext : ApplicationContext
                 return;
             }
 
-            if (!response.Success)
+            if (response.Success)
             {
-                _notifications.ShowError(response.ErrorMessage ?? "Unable to read boot state.");
+                // A success without state is a protocol violation; retry rather than stall.
+                HandleUnavailable("The service returned an incomplete boot state.");
+                return;
             }
+
+            HandleUnavailable(TrayErrorFormatter.Format(response, "Unable to read boot state."));
         }
         catch (OperationCanceledException) when (_lifetimeCts.IsCancellationRequested)
         {
@@ -109,11 +128,26 @@ public sealed class TrayApplicationContext : ApplicationContext
         }
         catch (Exception exception) when (IsTransportFailure(exception))
         {
-            HandleUnavailable(exception.Message);
+            HandleUnavailable(TrayErrorFormatter.DescribeTransportFailure(exception));
+        }
+        catch (Exception exception)
+        {
+            // Never let a background refresh fault; the tray must stay usable.
+            HandleUnavailable($"Unexpected error contacting the service: {exception.Message}");
         }
         finally
         {
-            _refreshGate.Release();
+            if (!_isDisposed)
+            {
+                _refreshGate.Release();
+
+                // Run a refresh that arrived while this one held the gate.
+                if (_refreshRequestedWhileBusy)
+                {
+                    _refreshRequestedWhileBusy = false;
+                    QueueRefresh();
+                }
+            }
         }
     }
 
@@ -122,6 +156,11 @@ public sealed class TrayApplicationContext : ApplicationContext
 
     private void HandleUnavailable(string message)
     {
+        if (_isDisposed)
+        {
+            return;
+        }
+
         _state = TrayState.UnavailableRetrying(message, _state.BootState);
         RebuildMenu();
         if (!_hasShownUnavailableNotification)
@@ -134,6 +173,11 @@ public sealed class TrayApplicationContext : ApplicationContext
 
     private void ScheduleRetry()
     {
+        if (_isDisposed)
+        {
+            return;
+        }
+
         _retryTimer.Stop();
         _retryTimer.Interval = (int)Math.Max(1, _nextRetryDelay.TotalMilliseconds);
         _retryTimer.Start();
@@ -148,7 +192,15 @@ public sealed class TrayApplicationContext : ApplicationContext
 
     private void RebuildMenu()
     {
+        // Clear() detaches items without disposing them, leaking handles and click handlers on
+        // every refresh, so the previous tree is disposed explicitly.
+        var previousItems = _contextMenu.Items.Cast<ToolStripItem>().ToArray();
         _contextMenu.Items.Clear();
+        foreach (var previousItem in previousItems)
+        {
+            previousItem.Dispose();
+        }
+
         var model = TrayMenuBuilder.Build(_state);
 
         foreach (var item in model.Items)
@@ -194,6 +246,18 @@ public sealed class TrayApplicationContext : ApplicationContext
             return;
         }
 
+        var isMutation = trayItem.CommandKind is TrayMenuCommandKind.SetDefaultEntry or TrayMenuCommandKind.SetTimeout;
+        if (isMutation)
+        {
+            // Serialize mutations so two clicks cannot race against each other.
+            if (_isMutating || _isDisposed)
+            {
+                return;
+            }
+
+            _isMutating = true;
+        }
+
         try
         {
             switch (trayItem.CommandKind)
@@ -212,9 +276,24 @@ public sealed class TrayApplicationContext : ApplicationContext
                     break;
             }
         }
+        catch (OperationCanceledException) when (_lifetimeCts.IsCancellationRequested)
+        {
+        }
         catch (Exception exception) when (IsTransportFailure(exception))
         {
-            HandleUnavailable(exception.Message);
+            HandleUnavailable(TrayErrorFormatter.DescribeTransportFailure(exception));
+        }
+        catch (Exception exception)
+        {
+            // This is an async void handler: an escaping exception would terminate the tray.
+            if (!_isDisposed)
+            {
+                _notifications.ShowError($"The operation failed unexpectedly: {exception.Message}");
+            }
+        }
+        finally
+        {
+            _isMutating = false;
         }
     }
 
@@ -222,9 +301,14 @@ public sealed class TrayApplicationContext : ApplicationContext
     {
         var entryId = item.CommandArgument ?? string.Empty;
         var response = await _client.SetDefaultEntryAsync(entryId, _lifetimeCts.Token).ConfigureAwait(true);
+        if (_isDisposed)
+        {
+            return;
+        }
+
         if (!response.Success)
         {
-            _notifications.ShowError(response.ErrorMessage ?? $"Unable to set {item.Text} as the default boot entry.");
+            _notifications.ShowError(TrayErrorFormatter.Format(response, $"Unable to set {item.Text} as the default boot entry."));
             return;
         }
 
@@ -241,9 +325,14 @@ public sealed class TrayApplicationContext : ApplicationContext
         }
 
         var response = await _client.SetTimeoutAsync(mode, _lifetimeCts.Token).ConfigureAwait(true);
+        if (_isDisposed)
+        {
+            return;
+        }
+
         if (!response.Success)
         {
-            _notifications.ShowError(response.ErrorMessage ?? $"Unable to set the boot menu timeout to {item.Text}.");
+            _notifications.ShowError(TrayErrorFormatter.Format(response, $"Unable to set the boot menu timeout to {item.Text}."));
             return;
         }
 
@@ -271,6 +360,16 @@ public sealed class TrayApplicationContext : ApplicationContext
 
     protected override void ExitThreadCore()
     {
+        if (_isDisposed)
+        {
+            base.ExitThreadCore();
+            return;
+        }
+
+        // Set first so any continuation that resumes during teardown becomes a no-op instead of
+        // touching disposed timers, menus or synchronization primitives.
+        _isDisposed = true;
+
         _lifetimeCts.Cancel();
         _startupTimer.Stop();
         _retryTimer.Stop();

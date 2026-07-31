@@ -16,11 +16,24 @@ public sealed class NamedPipeBootSwitchClient : IBootSwitchClient
     private const int MaxConnectAttempts = 6;
     private const int InitialBackoffMilliseconds = 100;
     private const int MaxBackoffMilliseconds = 1000;
+
+    /// <summary>
+    /// A service that accepts the connection but never replies must not block the tray forever.
+    /// </summary>
+    internal static readonly TimeSpan DefaultRequestTimeout = TimeSpan.FromSeconds(15);
+
     private readonly string _pipeName;
+    private readonly TimeSpan _requestTimeout;
 
     public NamedPipeBootSwitchClient(string pipeName = PipeName)
+        : this(pipeName, DefaultRequestTimeout)
+    {
+    }
+
+    internal NamedPipeBootSwitchClient(string pipeName, TimeSpan requestTimeout)
     {
         _pipeName = string.IsNullOrWhiteSpace(pipeName) ? PipeName : pipeName;
+        _requestTimeout = requestTimeout > TimeSpan.Zero ? requestTimeout : DefaultRequestTimeout;
     }
 
     public Task<BootOperationResponse> GetStateAsync(CancellationToken cancellationToken)
@@ -38,16 +51,36 @@ public sealed class NamedPipeBootSwitchClient : IBootSwitchClient
         JsonTypeInfo<TRequest> payloadTypeInfo,
         CancellationToken cancellationToken)
     {
-        using var pipe = new NamedPipeClientStream(".", pipeName: _pipeName, PipeDirection.InOut, PipeOptions.Asynchronous);
-        await ConnectWithRetryAsync(pipe, cancellationToken).ConfigureAwait(false);
+        using var timeoutCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+        timeoutCts.CancelAfter(_requestTimeout);
+        var requestToken = timeoutCts.Token;
 
-        pipe.ReadMode = PipeTransmissionMode.Message;
-        await WriteRequestAsync(pipe, command, payload, payloadTypeInfo, cancellationToken).ConfigureAwait(false);
+        try
+        {
+            using var pipe = new NamedPipeClientStream(".", pipeName: _pipeName, PipeDirection.InOut, PipeOptions.Asynchronous);
+            await ConnectWithRetryAsync(pipe, requestToken).ConfigureAwait(false);
 
-        using var responseDocument = await ReadResponseAsync(pipe, cancellationToken).ConfigureAwait(false);
-        var response = JsonSerializer.Deserialize(responseDocument.RootElement, ContractsJsonContext.Default.BootOperationResponse);
-        return response ?? new BootOperationResponse(false, "invalid_response", "The service returned an invalid response.", null);
+            pipe.ReadMode = PipeTransmissionMode.Message;
+            await WriteRequestAsync(pipe, command, payload, payloadTypeInfo, requestToken).ConfigureAwait(false);
+
+            using var responseDocument = await ReadResponseAsync(pipe, requestToken).ConfigureAwait(false);
+            var response = JsonSerializer.Deserialize(responseDocument.RootElement, ContractsJsonContext.Default.BootOperationResponse);
+            return response ?? InvalidResponse();
+        }
+        catch (OperationCanceledException) when (timeoutCts.IsCancellationRequested && !cancellationToken.IsCancellationRequested)
+        {
+            throw new TimeoutException($"The Windows Boot Switcher service did not respond to '{command}' within {_requestTimeout.TotalSeconds:0} seconds.");
+        }
+        catch (JsonException)
+        {
+            // A truncated or malformed reply is a protocol failure, not a tray crash.
+            return InvalidResponse();
+        }
     }
+
+    private static BootOperationResponse InvalidResponse() =>
+        new(false, "invalid_response", "The service returned an invalid response.", null);
+
 
     private static async Task ConnectWithRetryAsync(NamedPipeClientStream pipe, CancellationToken cancellationToken)
     {

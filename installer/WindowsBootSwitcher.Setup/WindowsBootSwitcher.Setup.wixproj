@@ -2,22 +2,50 @@
   <PropertyGroup>
     <AcceptEula>wix7</AcceptEula>
     <InstallerPlatform>x64</InstallerPlatform>
+    <!--
+      ICE61 (and the other suppressed ICEs) are VBScript based validations that fail with error
+      2738 wherever the script engine is not registered for the installing account. They are
+      suppressed to keep packaging portable, not to hide upgrade problems.
+    -->
     <SuppressIces>ICE09;ICE32;ICE61;ICE71</SuppressIces>
+    <!-- Override from CI with -p:SetupVersion=1.2.3.0 so upgrades can actually be sequenced. -->
+    <SetupVersion Condition="'$(SetupVersion)' == ''">1.0.0.0</SetupVersion>
     <ServiceProject>$(MSBuildProjectDirectory)\..\..\src\WindowsBootSwitcher.Service\WindowsBootSwitcher.Service.csproj</ServiceProject>
     <TrayProject>$(MSBuildProjectDirectory)\..\..\src\WindowsBootSwitcher.Tray\WindowsBootSwitcher.Tray.csproj</TrayProject>
     <ServicePublishDir>$(MSBuildProjectDirectory)\..\..\artifacts\service</ServicePublishDir>
     <TrayPublishDir>$(MSBuildProjectDirectory)\..\..\artifacts\tray</TrayPublishDir>
-    <DefineConstants>ServicePublishDir=$(ServicePublishDir);TrayPublishDir=$(TrayPublishDir)</DefineConstants>
+    <PayloadManifestDir>$(MSBuildProjectDirectory)\..\..\artifacts\service-verify</PayloadManifestDir>
+    <DefineConstants>ServicePublishDir=$(ServicePublishDir);TrayPublishDir=$(TrayPublishDir);SetupVersion=$(SetupVersion)</DefineConstants>
   </PropertyGroup>
 
-  <!--<Target Name="PublishPayloads" BeforeTargets="Build">
+  <ItemGroup>
+    <!-- Provides netfx:DotNetCompatibilityCheck, which asks the real host instead of guessing
+         from registry keys that .NET writes to the 32-bit view under patch-specific names. -->
+    <PackageReference Include="WixToolset.Netfx.wixext" />
+  </ItemGroup>
+
+  <!--
+    The MSI harvests whatever is in the publish directories, so packaging must publish first.
+    This must hook PrepareForBuild: WiX harvests during Build itself, so a BeforeTargets="Build"
+    hook runs too late and harvesting fails with WIX8601.
+  -->
+  <Target Name="PublishPayloads" BeforeTargets="PrepareForBuild" Condition="'$(SkipPublishPayloads)' != 'true'">
     <RemoveDir Directories="$(ServicePublishDir);$(TrayPublishDir)" />
     <MakeDir Directories="$(ServicePublishDir);$(TrayPublishDir)" />
     <Exec
       Command='dotnet publish "$(ServiceProject)" -c $(Configuration) -p:Platform=x64 -r win-x64 -o "$(ServicePublishDir)"' />
     <Exec
       Command='dotnet publish "$(TrayProject)" -c $(Configuration) -p:Platform=x64 -r win-x64 -o "$(TrayPublishDir)"' />
-  </Target>-->
+  </Target>
+
+  <Target Name="VerifyPayloads" AfterTargets="PublishPayloads">
+    <Error
+      Condition="!Exists('$(ServicePublishDir)\WindowsBootSwitcher.Service.exe')"
+      Text="Service payload is missing: $(ServicePublishDir)\WindowsBootSwitcher.Service.exe" />
+    <Error
+      Condition="!Exists('$(TrayPublishDir)\WindowsBootSwitcher.Tray.exe')"
+      Text="Tray payload is missing: $(TrayPublishDir)\WindowsBootSwitcher.Tray.exe" />
+  </Target>
 
   <Target Name="WritePayloadManifest" AfterTargets="Build">
     <ItemGroup>
@@ -28,11 +56,12 @@
       <PayloadManifestLines Include="TRAY PAYLOAD" />
       <PayloadManifestLines Include="@(TrayPayloadFiles -> '%(Identity)')" />
     </ItemGroup>
+    <MakeDir Directories="$(PayloadManifestDir)" />
     <WriteLinesToFile
-      File="$(MSBuildProjectDirectory)\..\..\artifacts\service-verify\wix-payload-manifest.txt"
+      File="$(PayloadManifestDir)\wix-payload-manifest.txt"
       Lines="@(PayloadManifestLines)"
       Overwrite="true"
       WriteOnlyWhenDifferent="true" />
-    <Message Importance="high" Text="Wrote payload manifest to $(MSBuildProjectDirectory)\..\..\artifacts\service-verify\wix-payload-manifest.txt" />
+    <Message Importance="high" Text="Wrote payload manifest to $(PayloadManifestDir)\wix-payload-manifest.txt" />
   </Target>
 </Project>

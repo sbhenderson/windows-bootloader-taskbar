@@ -66,14 +66,14 @@ public static class TrayMenuBuilder
 
     private static string GetCurrentDefaultDisplayName(BootState bootState)
     {
-        var currentDefault = bootState.Entries.FirstOrDefault(entry => entry.IsDefault);
-        if (currentDefault is not null)
+        // CurrentDefaultEntryId is the authoritative field; the per-entry flag is only a fallback.
+        var byId = bootState.Entries.FirstOrDefault(entry => string.Equals(entry.Id, bootState.CurrentDefaultEntryId, StringComparison.OrdinalIgnoreCase));
+        if (byId is not null)
         {
-            return currentDefault.DisplayName;
+            return byId.DisplayName;
         }
 
-        var byId = bootState.Entries.FirstOrDefault(entry => string.Equals(entry.Id, bootState.CurrentDefaultEntryId, StringComparison.Ordinal));
-        return byId?.DisplayName ?? "Unknown";
+        return bootState.Entries.FirstOrDefault(entry => entry.IsDefault)?.DisplayName ?? "Unknown";
     }
 }
 

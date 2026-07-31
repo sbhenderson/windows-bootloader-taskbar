@@ -1,27 +1,26 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<Wix xmlns="http://wixtoolset.org/schemas/v4/wxs">
-  <Fragment>
-    <Property Id="DOTNET_DESKTOP_RUNTIME_10_X64">
-      <RegistrySearch
-        Id="DotNetDesktopRuntime10X64Search"
-        Root="HKLM"
-        Key="SOFTWARE\dotnet\Setup\InstalledVersions\x64\sharedfx\Microsoft.WindowsDesktop.App"
-        Name="10.0"
-        Type="raw" />
-    </Property>
-  </Fragment>
+<Wix xmlns="http://wixtoolset.org/schemas/v4/wxs"
+     xmlns:netfx="http://wixtoolset.org/schemas/v4/wxs/netfx">
 
   <Package
     Name="Windows Boot Switcher"
     Manufacturer="Windows Boot Switcher"
-    Version="1.0.0.0"
+    Version="$(var.SetupVersion)"
     UpgradeCode="9E359E84-8B8E-4B6F-9B2D-0D4C1B4B9A6A"
     Scope="perMachine"
     InstallerVersion="500"
     Compressed="yes">
+    <!-- Sets the property to 0 when a compatible runtime is present. -->
+    <netfx:DotNetCompatibilityCheck
+      Id="DotNetDesktop10Check"
+      RuntimeType="desktop"
+      Platform="x64"
+      Version="10.0.0"
+      RollForward="latestMinor"
+      Property="DOTNETDESKTOPRUNTIME10CHECK" />
     <Launch
       Message="Windows Boot Switcher requires Microsoft .NET Desktop Runtime 10 (x64). Install the runtime and run setup again."
-      Condition="Installed OR DOTNET_DESKTOP_RUNTIME_10_X64" />
+      Condition="Installed OR DOTNETDESKTOPRUNTIME10CHECK = &quot;0&quot;" />
     <MajorUpgrade DowngradeErrorMessage="A newer version of [ProductName] is already installed." />
     <MediaTemplate EmbedCab="yes" />
     <Feature Id="ProductFeature" Title="Windows Boot Switcher" Level="1">
@@ -57,6 +56,11 @@
           Start="auto"
           Account="LocalSystem"
           ErrorControl="normal" />
+        <!--
+          Delayed autostart is set via the registry on purpose: WiX rejects the MSI ServiceConfig
+          table (WIX1149) because the Windows Installer SDK documents it as not working as
+          expected, and util:ServiceConfig only covers failure actions.
+        -->
         <RegistryValue
           Root="HKLM"
           Key="SYSTEM\CurrentControlSet\Services\WindowsBootSwitcher"

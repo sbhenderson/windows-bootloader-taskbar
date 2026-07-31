@@ -15,7 +15,10 @@ dotnet test  WindowsBootSwitcher.sln -c Debug -p:Platform=x64
 
 - CI builds `-c Release`; use Release when reproducing CI failures.
 - `Directory.Build.props` sets `TreatWarningsAsErrors=true` for every project, so a
-  warning fails the build. Nullable reference types and implicit usings are enabled solution-wide.
+  warning fails the build. Nullable reference types and implicit usings are enabled solution-wide,
+  and .NET analyzers run at `latest-recommended`.
+- NuGet versions are managed centrally in `Directory.Packages.props`. Add a `PackageVersion`
+  there and reference the package **without** a `Version` attribute, or restore fails with NU1008.
 - Run a single test class or method with a filter:
 
   ```powershell
@@ -69,10 +72,23 @@ the router, a request record + `[JsonSerializable]` entry in Contracts, and a cl
 
 ### Boot configuration backend
 
-`WmiBootConfigurationAdapter` (`IBootConfigurationAdapter`) talks to BCD via WMI
-(`root\WMI`, `BcdStore`/`BcdObject`). It filters to Windows OS loaders
-(`ApplicationType == 0x10200003`) and reads/writes the boot-manager timeout element
-(`0x23000003`). All WMI failures are wrapped in `BootConfigurationException` with a
+`WmiBootConfigurationAdapter` (`IBootConfigurationAdapter`) talks to BCD via the WMI provider in
+`root\WMI` (`BcdStore`/`BcdObject`). Facts that are easy to get wrong here:
+
+- BCD methods are declared `boolean Method(...)` where **`TRUE` means success** — the opposite of
+  the classic WMI "`ReturnValue == 0` means success" convention. `BcdValueReader.IsSuccess` owns
+  this.
+- There is **no** `GetIntegerElement` or `SetDefaultObject` method. Values are *elements* of the
+  boot manager object, read via `GetElement` and written via `SetIntegerElement` /
+  `SetObjectElement`.
+- The default entry is an **object** element (`0x23000003`); the menu timeout is an **integer**
+  element (`0x25000004`). The timeout element may legitimately be absent.
+- Entries are filtered on `BcdObject.Type == 0x10200003` (the property is `Type`, not
+  `ApplicationType`); the display name is the `0x12000004` description element.
+- The scope is connected with `ImpersonationLevel.Impersonate` and `EnablePrivileges = true`,
+  which BCD requires.
+
+All WMI failures are wrapped in `BootConfigurationException` with a
 stable string error code; the service maps these to `BootOperationResponse` error codes.
 
 ## Conventions

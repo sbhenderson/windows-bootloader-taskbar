@@ -1,4 +1,4 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <TargetFramework>net10.0-windows</TargetFramework>
     <OutputType>Exe</OutputType>
@@ -7,10 +7,13 @@
     <!-- <PublishAot>true</PublishAot> -->
   </PropertyGroup>
   <ItemGroup>
-    <PackageReference Include="Microsoft.Extensions.Hosting" Version="10.0.8" />
-    <PackageReference Include="Microsoft.Extensions.Hosting.WindowsServices" Version="10.0.8" />
-    <PackageReference Include="System.Diagnostics.EventLog" Version="10.0.8" />
+    <InternalsVisibleTo Include="WindowsBootSwitcher.Service.Tests" />
+  </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Extensions.Hosting" />
+    <PackageReference Include="Microsoft.Extensions.Hosting.WindowsServices" />
+    <PackageReference Include="System.Diagnostics.EventLog" />
     <ProjectReference Include="..\WindowsBootSwitcher.Contracts\WindowsBootSwitcher.Contracts.csproj" />
-    <PackageReference Include="System.Management" Version="10.0.8" />
+    <PackageReference Include="System.Management" />
   </ItemGroup>
 </Project>

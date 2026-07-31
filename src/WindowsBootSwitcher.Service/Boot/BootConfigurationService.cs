@@ -88,9 +88,15 @@ public sealed class BootConfigurationService(
             ? currentDefaultEntryId
             : null;
 
+        // The filter derives IsDefault from the snapshot, which is stale once a mutation
+        // supplies an override, so the flag is always recomputed from the effective default.
+        var resolvedEntries = ImmutableArray.CreateRange(
+            entries,
+            entry => entry with { IsDefault = string.Equals(entry.Id, visibleDefaultEntryId, StringComparison.OrdinalIgnoreCase) });
+
         return new BootState(
             CurrentDefaultEntryId: visibleDefaultEntryId,
             TimeoutSeconds: timeoutSeconds,
-            Entries: entries);
+            Entries: resolvedEntries);
     }
 }

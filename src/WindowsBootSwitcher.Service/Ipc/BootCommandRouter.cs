@@ -11,6 +11,12 @@ namespace WindowsBootSwitcher.Service.Ipc;
 
 public sealed class BootCommandRouter(BootConfigurationService bootConfigurationService, CallerAuthorizationPolicy authorizationPolicy)
 {
+    /// <summary>
+    /// BCD identifiers are brace wrapped GUIDs or short well-known aliases; anything materially
+    /// longer is a malformed or hostile request.
+    /// </summary>
+    internal const int MaxEntryIdLength = 128;
+
     private readonly BootConfigurationService _bootConfigurationService = bootConfigurationService ?? throw new ArgumentNullException(nameof(bootConfigurationService));
     private readonly CallerAuthorizationPolicy _authorizationPolicy = authorizationPolicy ?? throw new ArgumentNullException(nameof(authorizationPolicy));
 
@@ -58,6 +64,11 @@ public sealed class BootCommandRouter(BootConfigurationService bootConfiguration
         if (request is null || string.IsNullOrWhiteSpace(request.EntryId))
         {
             return InvalidRequest("The set_default_entry payload must include a boot entry id.");
+        }
+
+        if (request.EntryId.Length > MaxEntryIdLength)
+        {
+            return InvalidRequest($"The boot entry id must be {MaxEntryIdLength} characters or fewer.");
         }
 
         return _bootConfigurationService.SetDefaultEntry(request);
