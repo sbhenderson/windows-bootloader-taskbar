@@ -23,13 +23,13 @@ Windows Boot Switcher is a Windows 10/11 utility that lets a user switch the def
 ## Recommended Technology
 
 - **Language/runtime:** C# on .NET 10.
-- **Privileged component:** NativeAOT-enabled Windows service.
+- **Privileged component:** Windows service (NativeAOT was the goal but is currently deferred; see the status note under "Boot Configuration Handling").
 - **Tray UI:** Minimal WinForms tray application built around `NotifyIcon`.
 - **Installer:** MSI built with WiX.
 - **CI:** GitHub Actions on Windows runners.
 - **Primary architecture target:** x64 for v1.
 
-This is the best fit for the product because Windows service hosting, installer tooling, Event Log integration, and tray icon support are all straightforward in the .NET ecosystem. NativeAOT should be used where it reduces footprint without adding UI framework friction, especially in the service.
+This is the best fit for the product because Windows service hosting, installer tooling, Event Log integration, and tray icon support are all straightforward in the .NET ecosystem. NativeAOT was intended where it reduces footprint without adding UI framework friction, especially in the service.
 
 ## Solution Overview
 
@@ -125,7 +125,9 @@ Mutation flow:
 
 For v1, the privileged adapter should use the Windows BCD WMI provider in `root\WMI` rather than parsing localized `bcdedit.exe` output. That keeps the risky code path structured and testable while avoiding locale-sensitive text parsing.
 
-NativeAOT remains the preferred deployment target for the service. If WMI interop proves incompatible with NativeAOT during implementation, the fallback is to keep the service contract unchanged and temporarily publish the service as a regular self-contained executable rather than replacing the BCD access strategy with text parsing.
+**Status (implemented):** the fallback below is in effect. `PublishAot` is disabled in the service project (blocked on dotnet/runtime#61960) and the service ships framework-dependent, so the MSI requires the .NET Desktop Runtime 10 (x64). BCD access still uses WMI, not text parsing. NativeAOT remains the preferred long-term target.
+
+Original plan: NativeAOT remains the preferred deployment target for the service. If WMI interop proves incompatible with NativeAOT during implementation, the fallback is to keep the service contract unchanged and temporarily publish the service as a regular self-contained executable rather than replacing the BCD access strategy with text parsing.
 
 Behavior rules:
 

@@ -35,7 +35,7 @@ public sealed class TrayApplicationContext : ApplicationContext
         _contextMenu = new ContextMenuStrip();
         _notifyIcon = new NotifyIcon
         {
-            Icon = SystemIcons.Application,
+            Icon = LoadAppIcon(),
             Text = "Windows Boot Switcher",
             Visible = true,
             ContextMenuStrip = _contextMenu
@@ -50,6 +50,24 @@ public sealed class TrayApplicationContext : ApplicationContext
 
         RebuildMenu();
         _startupTimer.Start();
+    }
+
+    private static Icon LoadAppIcon()
+    {
+        try
+        {
+            using var stream = typeof(TrayApplicationContext).Assembly.GetManifestResourceStream("app.ico");
+            if (stream is not null)
+            {
+                return new Icon(stream);
+            }
+        }
+        catch (Exception exception) when (exception is ArgumentException or IOException)
+        {
+            // Fall through: a missing icon must never stop the tray from starting.
+        }
+
+        return SystemIcons.Application;
     }
 
     private void StartupTimerOnTick(object? sender, EventArgs e)

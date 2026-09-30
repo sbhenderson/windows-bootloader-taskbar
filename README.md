@@ -3,6 +3,28 @@
 Windows tray app + SYSTEM service for quickly switching the default Windows boot entry and boot
 menu timeout.
 
+## Current state
+
+Feature-complete against the v1 scope: the service, tray client, contracts, tests, CI, and WiX
+installer are all in place on `main`. There are no open `TODO`/`FIXME` markers in the source.
+
+### Known issues / limitations
+
+- **NativeAOT is disabled for the service** (blocked on
+  [dotnet/runtime#61960](https://github.com/dotnet/runtime/issues/61960)). Until AOT is viable,
+  the installed product requires the **.NET Desktop Runtime 10 (x64)** — the MSI enforces this
+  with a launch condition. The design spec carries a status note recording
+  that this fallback is in effect.
+- **WiX setup project is not in `WindowsBootSwitcher.sln`.** It was removed deliberately
+  (commit `b30ecd8`) to avoid project-reference contention on `WindowsBootSwitcher.Contracts`
+  during solution builds. Build/package it standalone — see "Package the MSI" below. The
+  downside: opening the solution in Visual Studio will not build the installer.
+- **Timeout is a two-position toggle** (`Off` / `30 seconds`), not a free-form value. This
+  matches the v1 design, but the BCD API supports any integer, so extending it later is
+  straightforward.
+- **No code signing.** The MSI and executables are unsigned, so SmartScreen will warn on
+  first install.
+
 ## Requirements
 
 - Windows 10 or 11, **x64** (there is no `AnyCPU`/`Win32` configuration)

@@ -4,9 +4,13 @@
     <OutputType>WinExe</OutputType>
     <UseWindowsForms>true</UseWindowsForms>
     <RootNamespace>WindowsBootSwitcher.Tray</RootNamespace>
+    <ApplicationIcon>Resources\app.ico</ApplicationIcon>
   </PropertyGroup>
   <ItemGroup>
     <InternalsVisibleTo Include="WindowsBootSwitcher.Tray.Tests" />
+  </ItemGroup>
+  <ItemGroup>
+    <EmbeddedResource Include="Resources\app.ico" LogicalName="app.ico" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\WindowsBootSwitcher.Contracts\WindowsBootSwitcher.Contracts.csproj" />
