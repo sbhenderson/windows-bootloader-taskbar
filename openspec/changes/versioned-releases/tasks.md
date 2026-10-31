@@ -14,6 +14,6 @@
 ## 3. Docs and verification
 
 - [x] 3.1 Update README packaging/release sections (copilot-instructions has no versioning content to change)
-- [ ] 3.2 Push to main: confirm the MSI and exes are `0.0.<run>`
-- [ ] 3.3 Push tag `v0.1.0`: confirm the release exists with the MSI attached
+- [x] 3.2 Push to main: run 15 passed with the version step (dev build `0.0.15`); local `-p:Version` build confirmed the exe stamp
+- [x] 3.3 Push tag `v0.1.0`: confirm the release exists with the MSI attached
 - [ ] 3.4 Manual on Windows: install `v0.1.0`, then a later build, and confirm the upgrade
