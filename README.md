@@ -97,7 +97,8 @@ service shows up as "service is not running" rather than a crash.
 | --- | --- |
 | Setup blocks with a runtime message | .NET Desktop Runtime 10 (x64) is missing |
 | Tray says the service is not running | `WindowsBootSwitcher` service is stopped or not installed |
-| Boot changes fail with `access_denied` | Only local administrators may mutate boot configuration |
+| Boot changes fail with `access_denied` | The account that approved the UAC prompt is not a local administrator |
+| Tray says "Change cancelled" | The UAC prompt was declined; nothing was changed |
 | Boot changes fail with `wmi_error` | The service could not read/write BCD through WMI |
 
 The service writes diagnostics to the Windows Application event log under the
@@ -122,8 +123,11 @@ envelope is `{ "command": "<name>", "payload": { ... } }` and the reply is alway
 - The pipe carries an explicit DACL: SYSTEM and Administrators get full control, authenticated
   users get read/write, and anonymous plus network logons are denied.
 - The server verifies the client is local and impersonates the caller to build a `CallerIdentity`.
-- Local interactive users **or** local admins may read (`get_state`); only **local administrators**
-  may mutate (`set_*`).
+- Local interactive users **or** local admins may read (`get_state`); only an **elevated** local
+  administrator token may mutate (`set_*`). With UAC on, the tray runs non-elevated, so each change
+  re-launches `WindowsBootSwitcher.Tray.exe --elevated-set-default <id>` or
+  `--elevated-set-timeout <Off|ThirtySeconds>` through a UAC prompt. That copy sends the one command
+  and reports the result through its exit code. An elevated tray sends changes directly.
 - Requests are capped at 64 KiB, connections time out, and concurrent clients are bounded.
 
 Treat `Security\`, `Ipc\BootCommandRouter.cs`, and `Ipc\NamedPipeBootSwitcherServer.cs` as

@@ -1,4 +1,4 @@
-using WindowsBootSwitcher.Contracts.Responses;
+﻿using WindowsBootSwitcher.Contracts.Responses;
 
 namespace WindowsBootSwitcher.Tray;
 
@@ -35,7 +35,7 @@ public static class TrayErrorFormatter
 
     public static string? DescribeErrorCode(string? errorCode) => errorCode switch
     {
-        "access_denied" => "Administrator rights are required; run the tray application elevated.",
+        "access_denied" => "Administrator rights are required; approve the administrator prompt with an administrator account.",
         "remote_client_rejected" => "Only local clients may use this service.",
         "entry_not_found" => "The boot entry no longer exists; refresh and try again.",
         "bcd_object_not_found" => "The boot configuration entry could not be located.",
@@ -44,6 +44,7 @@ public static class TrayErrorFormatter
         "invalid_entry_id" => "The boot entry identifier was not valid.",
         "invalid_request" or "request_too_large" or "unknown_command" => "The service rejected the request.",
         "invalid_response" => "The service sent a response the tray could not understand.",
+        "elevation_failed" => "The elevated helper could not complete the change.",
         "internal_error" => "Check the Windows Application event log for details.",
         _ => null
     };

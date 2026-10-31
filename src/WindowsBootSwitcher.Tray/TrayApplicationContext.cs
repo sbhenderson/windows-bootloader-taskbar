@@ -1,7 +1,9 @@
 ﻿using System.Drawing;
 using System.Windows.Forms;
 using WindowsBootSwitcher.Contracts;
+using WindowsBootSwitcher.Contracts.Responses;
 using WindowsBootSwitcher.Tray.Client;
+using WindowsBootSwitcher.Tray.Elevation;
 using WindowsBootSwitcher.Tray.Notifications;
 
 namespace WindowsBootSwitcher.Tray;
@@ -24,7 +26,7 @@ public sealed class TrayApplicationContext : ApplicationContext
     private bool _refreshRequestedWhileBusy;
 
     public TrayApplicationContext()
-        : this(new NamedPipeBootSwitchClient())
+        : this(new ElevatingBootSwitchClient(new NamedPipeBootSwitchClient(), new RunAsProcessLauncher()))
     {
     }
 
@@ -326,7 +328,7 @@ public sealed class TrayApplicationContext : ApplicationContext
 
         if (!response.Success)
         {
-            _notifications.ShowError(TrayErrorFormatter.Format(response, $"Unable to set {item.Text} as the default boot entry."));
+            ShowMutationFailure(response, $"Unable to set {item.Text} as the default boot entry.");
             return;
         }
 
@@ -350,12 +352,24 @@ public sealed class TrayApplicationContext : ApplicationContext
 
         if (!response.Success)
         {
-            _notifications.ShowError(TrayErrorFormatter.Format(response, $"Unable to set the boot menu timeout to {item.Text}."));
+            ShowMutationFailure(response, $"Unable to set the boot menu timeout to {item.Text}.");
             return;
         }
 
         _notifications.ShowSuccess($"Boot menu timeout set to {item.Text}.");
         await RefreshStateAsync().ConfigureAwait(true);
+    }
+
+    private void ShowMutationFailure(BootOperationResponse response, string fallbackMessage)
+    {
+        // Declining the UAC prompt is a choice, not a failure.
+        if (response.ErrorCode == ElevatedCommand.ElevationCancelledCode)
+        {
+            _notifications.ShowStatus("Change cancelled.");
+            return;
+        }
+
+        _notifications.ShowError(TrayErrorFormatter.Format(response, fallbackMessage));
     }
 
     private static bool TryParseTimeout(string? value, out BootMenuTimeoutMode mode)
