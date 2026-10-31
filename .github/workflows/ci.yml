@@ -2,6 +2,9 @@ name: CI
 
 on:
   push:
+    # Listing tags alone would stop branch builds, so branches are listed explicitly too.
+    branches: ['**']
+    tags: ['v*']
   pull_request:
 
 # Least privilege: the workflow only reads the repository.
@@ -21,10 +24,30 @@ env:
 jobs:
   build:
     runs-on: windows-latest
+    outputs:
+      version: ${{ steps.version.outputs.version }}
 
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+
+      - name: Compute version
+        id: version
+        shell: pwsh
+        run: |
+          if ($env:GITHUB_REF -like 'refs/tags/v*') {
+            if ($env:GITHUB_REF_NAME -notmatch '^v(\d+\.\d+\.\d+)$') {
+              Write-Error "Release tags must look like vMAJOR.MINOR.PATCH; got '$env:GITHUB_REF_NAME'."
+              exit 1
+            }
+            $version = $Matches[1]
+          } else {
+            # Dev builds upgrade each other but never outrank a real release (first release is v0.1.0).
+            $version = "0.0.$env:GITHUB_RUN_NUMBER"
+          }
+          "VERSION=$version" >> $env:GITHUB_ENV
+          "version=$version" >> $env:GITHUB_OUTPUT
+          Write-Host "Building version $version"
 
       - name: Setup .NET
         uses: actions/setup-dotnet@v4
@@ -43,7 +66,7 @@ jobs:
         run: dotnet restore WindowsBootSwitcher.sln
 
       - name: Build
-        run: dotnet build WindowsBootSwitcher.sln -c Release -p:Platform=x64 --no-restore
+        run: dotnet build WindowsBootSwitcher.sln -c Release -p:Platform=x64 -p:Version=$env:VERSION --no-restore
 
       - name: Test
         run: >
@@ -60,13 +83,13 @@ jobs:
           if-no-files-found: warn
 
       - name: Publish service
-        run: dotnet publish src\WindowsBootSwitcher.Service\WindowsBootSwitcher.Service.csproj -c Release -r win-x64 -p:Platform=x64 -o artifacts\service
+        run: dotnet publish src\WindowsBootSwitcher.Service\WindowsBootSwitcher.Service.csproj -c Release -r win-x64 -p:Platform=x64 -p:Version=$env:VERSION -o artifacts\service
 
       - name: Publish tray
-        run: dotnet publish src\WindowsBootSwitcher.Tray\WindowsBootSwitcher.Tray.csproj -c Release -r win-x64 -p:Platform=x64 -o artifacts\tray
+        run: dotnet publish src\WindowsBootSwitcher.Tray\WindowsBootSwitcher.Tray.csproj -c Release -r win-x64 -p:Platform=x64 -p:Version=$env:VERSION -o artifacts\tray
 
       - name: Build installer
-        run: dotnet build installer\WindowsBootSwitcher.Setup\WindowsBootSwitcher.Setup.wixproj -c Release -p:Platform=x64
+        run: dotnet build installer\WindowsBootSwitcher.Setup\WindowsBootSwitcher.Setup.wixproj -c Release -p:Platform=x64 -p:Version=$env:VERSION
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
@@ -79,3 +102,29 @@ jobs:
             artifacts/tray/**
             installer/WindowsBootSwitcher.Setup/bin/x64/Release/*.msi
           if-no-files-found: error
+
+  release:
+    # Only release tags publish; tests have already passed in the build job.
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Download build output
+        uses: actions/download-artifact@v4
+        with:
+          name: windows-boot-switcher
+          path: dist
+
+      - name: Publish GitHub release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ needs.build.outputs.version }}
+        run: |
+          msi=$(find dist -name '*.msi' -print -quit)
+          test -n "$msi" || { echo "No MSI in build output" >&2; exit 1; }
+          cp "$msi" "WindowsBootSwitcher-${VERSION}-x64.msi"
+          gh release create "$GITHUB_REF_NAME" "WindowsBootSwitcher-${VERSION}-x64.msi" \
+            --repo "$GITHUB_REPOSITORY" --title "$GITHUB_REF_NAME" --generate-notes

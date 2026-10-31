@@ -5,7 +5,7 @@
   <Package
     Name="Windows Boot Switcher"
     Manufacturer="Windows Boot Switcher"
-    Version="$(var.SetupVersion)"
+    Version="$(var.ProductVersion)"
     UpgradeCode="9E359E84-8B8E-4B6F-9B2D-0D4C1B4B9A6A"
     Scope="perMachine"
     InstallerVersion="500"

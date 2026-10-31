@@ -11,6 +11,9 @@
     <EnableNETAnalyzers>true</EnableNETAnalyzers>
     <AnalysisLevel>latest-recommended</AnalysisLevel>
     <!-- Normalises embedded paths so CI output is reproducible. -->
+    <!-- Product version. CI passes -p:Version (tag vX.Y.Z, or 0.0.<run> for untagged builds);
+         the SDK derives the exe file/assembly versions and the installer uses it as the MSI version. -->
+    <Version Condition="'$(Version)' == ''">1.0.0</Version>
     <ContinuousIntegrationBuild Condition="'$(CI)' == 'true'">true</ContinuousIntegrationBuild>
   </PropertyGroup>
 </Project>

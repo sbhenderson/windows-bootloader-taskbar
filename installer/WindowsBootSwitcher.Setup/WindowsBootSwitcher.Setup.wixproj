@@ -8,14 +8,12 @@
       suppressed to keep packaging portable, not to hide upgrade problems.
     -->
     <SuppressIces>ICE09;ICE32;ICE61;ICE71</SuppressIces>
-    <!-- Override from CI with -p:SetupVersion=1.2.3.0 so upgrades can actually be sequenced. -->
-    <SetupVersion Condition="'$(SetupVersion)' == ''">1.0.0.0</SetupVersion>
     <ServiceProject>$(MSBuildProjectDirectory)\..\..\src\WindowsBootSwitcher.Service\WindowsBootSwitcher.Service.csproj</ServiceProject>
     <TrayProject>$(MSBuildProjectDirectory)\..\..\src\WindowsBootSwitcher.Tray\WindowsBootSwitcher.Tray.csproj</TrayProject>
     <ServicePublishDir>$(MSBuildProjectDirectory)\..\..\artifacts\service</ServicePublishDir>
     <TrayPublishDir>$(MSBuildProjectDirectory)\..\..\artifacts\tray</TrayPublishDir>
     <PayloadManifestDir>$(MSBuildProjectDirectory)\..\..\artifacts\service-verify</PayloadManifestDir>
-    <DefineConstants>ServicePublishDir=$(ServicePublishDir);TrayPublishDir=$(TrayPublishDir);SetupVersion=$(SetupVersion)</DefineConstants>
+    <DefineConstants>ServicePublishDir=$(ServicePublishDir);TrayPublishDir=$(TrayPublishDir);ProductVersion=$(Version)</DefineConstants>
   </PropertyGroup>
 
   <ItemGroup>

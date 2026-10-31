@@ -22,6 +22,9 @@ installer are all in place on `main`. There are no open `TODO`/`FIXME` markers i
 - **Timeout is a two-position toggle** (`Off` / `30 seconds`), not a free-form value. This
   matches the v1 design, but the BCD API supports any integer, so extending it later is
   straightforward.
+- **A missing timeout shows as "Off".** If the BCD has no timeout value at all, Windows waits at
+  the boot menu indefinitely, but the tray reports `Off`. Choosing either option in the tray writes
+  an explicit value and clears this up.
 - **No code signing.** The MSI and executables are unsigned, so SmartScreen will warn on
   first install.
 
@@ -60,15 +63,25 @@ dotnet build installer\WindowsBootSwitcher.Setup\WindowsBootSwitcher.Setup.wixpr
 
 The MSI is written to `installer\WindowsBootSwitcher.Setup\bin\x64\Release\WindowsBootSwitcher.Setup.msi`.
 
-Stamp a release version (the default is `1.0.0.0`, which cannot be upgraded over):
+Stamp a version on the MSI and both executables (local builds default to `1.0.0`):
 
 ```powershell
 dotnet build installer\WindowsBootSwitcher.Setup\WindowsBootSwitcher.Setup.wixproj `
-  -c Release -p:Platform=x64 -t:Rebuild -p:SetupVersion=1.2.3.0
+  -c Release -p:Platform=x64 -t:Rebuild -p:Version=1.2.3
 ```
 
 Pass `-p:SkipPublishPayloads=true` to package whatever is already in `artifacts\` instead of
 republishing.
+
+## Releases and versioning
+
+- **Releases:** push a tag `vMAJOR.MINOR.PATCH` (for example `git tag v0.1.0 && git push origin v0.1.0`).
+  CI builds and tests it, then publishes a GitHub Release with `WindowsBootSwitcher-<version>-x64.msi`
+  attached. Other tag shapes (`v1.2`, `v1.2.3-rc1`) fail the build and publish nothing.
+- **Untagged builds** (branch pushes, PRs) are versioned `0.0.<run number>`. Each upgrades the
+  previous one, and any release outranks them.
+- Windows Installer compares only the first three version fields, and the MSI refuses to install
+  over a newer version. To go back to a dev build after installing a release, uninstall first.
 
 ## Install and uninstall
 
