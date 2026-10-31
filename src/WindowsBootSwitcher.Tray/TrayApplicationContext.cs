@@ -18,6 +18,7 @@ public sealed class TrayApplicationContext : ApplicationContext
     private readonly System.Windows.Forms.Timer _retryTimer;
     private readonly SemaphoreSlim _refreshGate = new(1, 1);
     private readonly CancellationTokenSource _lifetimeCts = new();
+    private readonly MenuOpenRefreshPolicy _menuOpenRefreshPolicy;
     private TrayState _state = TrayState.Connecting();
     private TimeSpan _nextRetryDelay = TimeSpan.FromSeconds(1);
     private bool _hasShownUnavailableNotification;
@@ -30,11 +31,13 @@ public sealed class TrayApplicationContext : ApplicationContext
     {
     }
 
-    internal TrayApplicationContext(IBootSwitchClient client)
+    internal TrayApplicationContext(IBootSwitchClient client, MenuOpenRefreshPolicy? menuOpenRefreshPolicy = null)
     {
         _client = client ?? throw new ArgumentNullException(nameof(client));
+        _menuOpenRefreshPolicy = menuOpenRefreshPolicy ?? new MenuOpenRefreshPolicy();
 
         _contextMenu = new ContextMenuStrip();
+        _contextMenu.Opening += ContextMenuOnOpening;
         _notifyIcon = new NotifyIcon
         {
             Icon = LoadAppIcon(),
@@ -70,6 +73,15 @@ public sealed class TrayApplicationContext : ApplicationContext
         }
 
         return SystemIcons.Application;
+    }
+
+    private void ContextMenuOnOpening(object? sender, System.ComponentModel.CancelEventArgs e)
+    {
+        // Never cancel the open: show the last known state now and update when the reply lands.
+        if (_menuOpenRefreshPolicy.ShouldRefreshOnOpen())
+        {
+            QueueRefresh();
+        }
     }
 
     private void StartupTimerOnTick(object? sender, EventArgs e)
@@ -119,11 +131,18 @@ public sealed class TrayApplicationContext : ApplicationContext
             if (response.Success && response.State is not null)
             {
                 var wasUnavailable = _state.ConnectionStatus != TrayConnectionStatus.Available;
+                var isUnchanged = !wasUnavailable && BootStateComparer.AreEquivalent(_state.BootState, response.State);
                 _state = TrayState.Available(response.State);
                 _nextRetryDelay = TimeSpan.FromSeconds(1);
                 _hasShownUnavailableNotification = false;
+                _menuOpenRefreshPolicy.RecordSuccessfulRefresh();
                 StopRetryTimer();
-                RebuildMenu();
+
+                // Rebuilding an open menu with identical items would only make it flicker.
+                if (!isUnchanged)
+                {
+                    RebuildMenu();
+                }
 
                 if (wasUnavailable)
                 {
